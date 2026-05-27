@@ -115,6 +115,10 @@ h1,h2,h3,h4,h5 { font-family: 'Nunito', sans-serif; }
 .cal-day.other-month .cal-day-num { color: var(--text-muted); opacity: 0.4; }
 .cal-dots { display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; margin-top: 2px; }
 .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+.cal-dot-plan { width: 7px; height: 7px; border-radius: 2px; background: var(--orange); }
+.plan-card { background: #FFF8F0; border: 2px solid #FFD4A8; border-radius: var(--radius-sm); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.plan-card-icon { font-size: 1.2rem; flex-shrink: 0; }
+.plan-card-name { font-weight: 700; font-family: 'Nunito', sans-serif; font-size: 0.95rem; font-style: italic; }
 .day-panel { background: var(--card); border-radius: var(--radius); padding: 1.25rem; margin-top: 1rem; display: none; }
 .day-panel.visible { display: block; }
 .meal-item { display: flex; align-items: flex-start; gap: 0.875rem; padding: 0.875rem 0; border-bottom: 1px solid var(--border); }
@@ -284,6 +288,11 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <div class="action-info"><div class="action-card-title">Add from Favorites</div><div class="action-card-sub">Saved meals &amp; items</div></div>
       <span style="color:var(--text-muted);font-size:1.1rem;">›</span>
     </div>
+    <div class="action-card-full" onclick="openModal('modal-add-plan')" style="border-color:#FFD4A8;">
+      <div class="action-icon" style="background:#FFF3E0;">🍴</div>
+      <div class="action-info"><div class="action-card-title">Add Dinner Plans</div><div class="action-card-sub">Eating out, restaurant, Grandma's...</div></div>
+      <span style="color:var(--text-muted);font-size:1.1rem;">›</span>
+    </div>
     <div class="section-header mt-md"><div class="section-title">Today's Meals</div></div>
     <div id="home-today-meals"></div>
   </div>
@@ -302,7 +311,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <div class="day-panel" id="day-panel">
       <div class="section-header">
         <div class="section-title" id="day-panel-title">—</div>
+        <div style="display:flex;gap:0.5rem;">
         <button class="btn btn-secondary btn-sm" onclick="openAddMealForDate()">+ Meal</button>
+        <button class="btn btn-sm" style="background:#FF8C42;color:white;" onclick="openAddPlanForDate()">+ Plan</button>
+      </div>
       </div>
       <div id="day-panel-meals"></div>
     </div>
@@ -472,6 +484,17 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <button class="btn btn-primary mt-md" onclick="saveMeal()">Save Meal</button>
 </div></div>
 
+<!-- DINNER PLANS MODAL -->
+<div class="modal-overlay" id="modal-add-plan"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span id="add-plan-modal-title">Add Dinner Plans</span><button class="modal-close" onclick="closeModal('modal-add-plan')">✕</button></div>
+  <input type="hidden" id="edit-plan-id">
+  <div class="form-group"><label>What's the plan? *</label><input type="text" id="plan-name" placeholder="e.g. Eating Out, Chipotle, Dinner at Grandma's"></div>
+  <div class="form-group"><label>Date</label><input type="date" id="plan-date"></div>
+  <div class="form-group"><label>Notes</label><textarea class="note-area" id="plan-notes" placeholder="Any details..."></textarea></div>
+  <button class="btn btn-primary mt-md" onclick="savePlan()" style="background:var(--orange);">Save Plan</button>
+</div></div>
+
 <!-- FAVORITES MODAL -->
 <div class="modal-overlay" id="modal-favorites"><div class="modal">
   <div class="modal-handle"></div>
@@ -599,6 +622,19 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <button class="btn btn-primary btn-sm" onclick="addFavItemToList()">+ Add to List</button>
   </div>
 </div></div>
+<!-- INGREDIENT PICKER MODAL -->
+<div class="modal-overlay" id="modal-ingr-picker"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Pick an Ingredient</span><button class="modal-close" onclick="closeModal('modal-ingr-picker')">✕</button></div>
+  <div class="modal-tabs">
+    <button class="modal-tab active" onclick="switchIngrTab('favorites',this)">⭐ Favorites</button>
+    <button class="modal-tab" onclick="switchIngrTab('recent',this)">🕐 Recent</button>
+  </div>
+  <input type="text" id="ingr-picker-search" placeholder="Search..." style="width:100%;padding:0.6rem 0.875rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito Sans',sans-serif;font-size:0.9rem;background:var(--bg);outline:none;margin-bottom:0.75rem;" oninput="filterIngrPicker()">
+  <div id="ingr-picker-favorites"></div>
+  <div id="ingr-picker-recent" class="hidden"></div>
+</div></div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -621,7 +657,7 @@ const storage = getStorage(fbApp);
 
 const S = {
   user: null, profile: null,
-  meals: {}, shopItems: [], favMeals: [], favItems: [], stores: [], shopHistory: [],
+  meals: {}, plans: {}, shopItems: [], favMeals: [], favItems: [], stores: [], shopHistory: [],
   categories: ["Produce","Dairy","Meat & Seafood","Deli","Bakery","Frozen","Pantry","Snacks","Beverages","Household","Health & Wellness","Personal Care","Arts & Crafts","Other"],
   calY: new Date().getFullYear(), calM: new Date().getMonth(),
   histCalY: new Date().getFullYear(), histCalM: new Date().getMonth(),
@@ -703,6 +739,7 @@ async function loadProfile() {
 
 function initListeners() {
   S.unsubs.push(onSnapshot(userCol('meals'), s => { S.meals={}; s.forEach(d=>S.meals[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); renderShoppingList(); }));
+  S.unsubs.push(onSnapshot(userCol('dinnerPlans'), s => { S.plans={}; s.forEach(d=>S.plans[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); }));
   S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data()})); renderShoppingList(); updateCartTotal(); }));
   S.unsubs.push(onSnapshot(userCol('favMeals'), s => { S.favMeals=[]; s.forEach(d=>S.favMeals.push({id:d.id,...d.data()})); renderFavPage(); renderModalFavs(); }));
   S.unsubs.push(onSnapshot(userCol('favItems'), s => { S.favItems=[]; s.forEach(d=>S.favItems.push({id:d.id,...d.data()})); renderFavItemsPage(); renderModalFavItems(); }));
@@ -870,7 +907,7 @@ window.removeShopItem = async function() {
 // MEALS
 window.addIngredientRow = function(name='', qty=1) {
   const r=document.createElement('div'); r.className='ingredient-row';
-  r.innerHTML=`<input type="text" placeholder="Ingredient" value="${name}" class="ingr-name"><input type="number" placeholder="Qty" value="${qty}" min="1" class="ingr-qty qty-input"><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#EF4444;font-size:1.1rem;padding:0.2rem;">✕</button>`;
+  r.innerHTML=`<input type="text" placeholder="Ingredient" value="${name}" class="ingr-name" style="flex:1;"><button onclick="openIngrPicker(this.parentElement)" title="Browse items" style="background:var(--bg);border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;padding:0.4rem 0.5rem;font-size:0.9rem;flex-shrink:0;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">📋</button><input type="number" placeholder="Qty" value="${qty}" min="1" class="ingr-qty qty-input"><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#EF4444;font-size:1.1rem;padding:0.2rem;">✕</button>`;
   document.getElementById('ingredient-rows').appendChild(r);
 };
 
@@ -937,7 +974,8 @@ function renderCalGrid(id,y,m,isHist) {
     if(!c.cur){html+=`<div class="cal-day other-month"><span class="cal-day-num">${c.day}</span></div>`;return;}
     const dayMeals=isHist?[]:Object.values(S.meals).filter(mm=>mm.date===c.ds);
     const hasShop=S.shopHistory.some(sh=>sh.date===c.ds);
-    const dots=dayMeals.slice(0,3).map(mm=>`<div class="cal-dot" style="background:${mealColor(mm.name)}"></div>`).join('');
+    const dayPlans=isHist?[]:Object.values(S.plans||{}).filter(p=>p.date===c.ds);
+    const dots=dayMeals.slice(0,3).map(mm=>`<div class="cal-dot" style="background:${mealColor(mm.name)}"></div>`).join('')+(dayPlans.length?`<div class="cal-dot-plan"></div>`:'');
     html+=`<div class="cal-day${c.ds===t?' today':''}${c.ds===S.selDate?' selected':''}${hasShop?' has-shop':''}" onclick="${isHist?`showHistDate('${c.ds}')`:`selectCalDate('${c.ds}')`}"><span class="cal-day-num">${c.day}</span><div class="cal-dots">${dots}</div></div>`;
   });
   grid.innerHTML=html;
@@ -951,17 +989,23 @@ function showDayPanel(ds) {
   const panel=document.getElementById('day-panel'); panel.classList.add('visible');
   document.getElementById('day-panel-title').textContent=fmtDate(ds);
   const dayMeals=Object.values(S.meals).filter(m=>m.date===ds);
+  const dayPlans=Object.values(S.plans||{}).filter(p=>p.date===ds);
   const el=document.getElementById('day-panel-meals');
-  if(!dayMeals.length){el.innerHTML='<div class="empty-state" style="padding:1rem 0;"><div class="empty-sub">No meals on this date.</div></div>';return;}
-  el.innerHTML=dayMeals.map(m=>`<div class="meal-item"><div class="meal-color-dot" style="background:${mealColor(m.name)}"></div><div class="meal-info"><div class="meal-name">${m.name}</div><div class="meal-meta"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}</div>${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}</div><button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;">🗑️</button></div>`).join('');
+  if(!dayMeals.length && !dayPlans.length){el.innerHTML='<div class="empty-state" style="padding:1rem 0;"><div class="empty-sub">No meals or plans on this date.</div></div>';return;}
+  const mealHTML=dayMeals.map(m=>`<div class="meal-item"><div class="meal-color-dot" style="background:${mealColor(m.name)}"></div><div class="meal-info"><div class="meal-name">${m.name}</div><div class="meal-meta"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}</div>${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}</div><button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;">🗑️</button></div>`).join('');
+  const planHTML=dayPlans.map(p=>`<div class="plan-card"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">${p.notes}</div>`:''}</div><button onclick="editPlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;margin-right:0.25rem;">✏️</button><button onclick="deletePlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;">🗑️</button></div>`).join('');
+  el.innerHTML=planHTML+mealHTML;
 }
 window.deleteMeal=async function(id){if(confirm('Remove this meal?')){await deleteDoc(doc(db,`users/${uid()}/meals/${id}`));if(S.selDate)showDayPanel(S.selDate);}};
 
 function renderTodayMeals() {
   const el=document.getElementById('home-today-meals'); const t=todayStr();
   const tm=Object.values(S.meals).filter(m=>m.date===t);
-  if(!tm.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">🍽️</span><div class="empty-title">No meals today</div><div class="empty-sub">Add a meal to get started</div></div>`;return;}
-  el.innerHTML=tm.map(m=>`<div class="card" style="display:flex;align-items:center;gap:0.75rem;padding:1rem;margin-bottom:0.625rem;"><div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div><div style="flex:1;"><div style="font-family:'Nunito',sans-serif;font-weight:800;">${m.name}</div><div style="display:flex;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).length?`<span class="pill pill-gray">${m.ingredients.length} ingredients</span>`:''}</div></div></div>`).join('');
+  const tp=Object.values(S.plans||{}).filter(p=>p.date===t);
+  if(!tm.length && !tp.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">🍽️</span><div class="empty-title">No meals or plans today</div><div class="empty-sub">Add a meal to get started</div></div>`;return;}
+  const planHTML=tp.map(p=>`<div class="plan-card" style="margin-bottom:0.625rem;"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);">${p.notes}</div>`:''}</div><span class="pill pill-orange">Dinner Plan</span></div>`).join('');
+  const mealHTML=tm.map(m=>`<div class="card" style="display:flex;align-items:center;gap:0.75rem;padding:1rem;margin-bottom:0.625rem;"><div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div><div style="flex:1;"><div style="font-family:'Nunito',sans-serif;font-weight:800;">${m.name}</div><div style="display:flex;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).length?`<span class="pill pill-gray">${m.ingredients.length} ingredients</span>`:''}</div></div></div>`).join('');
+  el.innerHTML=planHTML+mealHTML;
 }
 
 // FAVORITES
@@ -1243,22 +1287,117 @@ window.saveStore=async function(){
 };
 
 // SHOP HISTORY
+// Current history shop being viewed
+let _curHistShop = null;
+
 window.showHistDate=function(ds){
   const shops=S.shopHistory.filter(sh=>sh.date===ds); if(!shops.length) return;
-  const shop=shops[shops.length-1];
-  document.getElementById('hist-detail-title').textContent=fmtDate(ds);
+  _curHistShop = JSON.parse(JSON.stringify(shops[shops.length-1])); // deep copy for editing
+  renderHistDetail();
+  openModal('modal-history-detail');
+};
+
+function renderHistDetail() {
+  const shop = _curHistShop; if (!shop) return;
+  document.getElementById('hist-detail-title').textContent=fmtDate(shop.date);
   const groups={};
-  (shop.items||[]).forEach(i=>{ const k=i.store||'No Store'; if(!groups[k]) groups[k]=[]; groups[k].push(i); });
-  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.875rem;background:var(--bg);border-radius:var(--radius-sm);"><div><div style="font-size:0.75rem;color:var(--text-muted);">Total Spent</div><div style="font-family:'Nunito',sans-serif;font-size:1.5rem;font-weight:900;color:var(--green-dark);">$${parseFloat(shop.total||0).toFixed(2)}</div></div><div style="text-align:right;font-size:0.8rem;color:var(--text-muted);">${(shop.stores||[]).join(', ')||'—'}</div></div>`;
-  if(shop.notes) html+=`<div style="font-size:0.875rem;color:var(--text-muted);padding:0.75rem;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:0.875rem;">${shop.notes}</div>`;
+  (shop.items||[]).forEach((item,idx)=>{ const k=item.store||'No Store'; if(!groups[k]) groups[k]=[]; groups[k].push({...item, _idx: idx}); });
+
+  // Recalculate totals
+  const grandTotal = (shop.items||[]).reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
+
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.875rem;background:var(--bg);border-radius:var(--radius-sm);">
+    <div><div style="font-size:0.75rem;color:var(--text-muted);">Total Spent</div>
+    <div style="font-family:'Nunito',sans-serif;font-size:1.5rem;font-weight:900;color:var(--green-dark);" id="hist-grand-total">$${grandTotal.toFixed(2)}</div></div>
+    <div style="text-align:right;font-size:0.8rem;color:var(--text-muted);">${(shop.stores||[]).join(', ')||'—'}</div>
+  </div>`;
+
   Object.entries(groups).forEach(([store,items])=>{
     const stotal=items.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
-    html+=`<div class="group-header"><span class="group-header-title">${store}</span><span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">$${stotal.toFixed(2)}</span></div>`;
-    items.forEach(i=>{html+=`<div style="display:flex;justify-content:space-between;padding:0.5rem 0.875rem;font-size:0.875rem;border-bottom:1px solid var(--border);"><div><div style="font-weight:600;">${i.name}</div>${i.category?`<div style="font-size:0.75rem;color:var(--text-muted);">${i.category}</div>`:''}</div><div style="text-align:right;"><div style="font-weight:700;">$${((parseFloat(i.price)||0)*(parseInt(i.qty)||1)).toFixed(2)}</div><div style="font-size:0.75rem;color:var(--text-muted);">×${i.qty||1} @ $${parseFloat(i.price||0).toFixed(2)}</div></div></div>`;});
+    html+=`<div class="group-header"><span class="group-header-title">${store}</span><span id="hist-store-total-${store.replace(/\s/g,'_')}" style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">$${stotal.toFixed(2)}</span></div>`;
+    items.forEach(item=>{
+      html+=`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.875rem;border-bottom:1px solid var(--border);" id="hist-item-row-${item._idx}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:0.875rem;">${item.name}</div>
+          ${item.category?`<div style="font-size:0.7rem;color:var(--text-muted);">${item.category}</div>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+            <div style="display:flex;align-items:center;gap:0.3rem;">
+              <span style="font-size:0.7rem;color:var(--text-muted);">qty</span>
+              <input type="number" value="${item.qty||1}" min="1" style="width:48px;padding:0.2rem 0.35rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.8rem;text-align:center;font-family:'Nunito',sans-serif;font-weight:700;background:var(--bg);" onchange="updateHistItem(${item._idx},'qty',this.value)">
+            </div>
+            <div style="display:flex;align-items:center;gap:0.3rem;">
+              <span style="font-size:0.7rem;color:var(--text-muted);">$</span>
+              <input type="number" value="${parseFloat(item.price||0).toFixed(2)}" min="0" step="0.01" style="width:64px;padding:0.2rem 0.35rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.8rem;text-align:center;font-family:'Nunito',sans-serif;font-weight:700;background:var(--bg);" onchange="updateHistItem(${item._idx},'price',this.value)">
+            </div>
+          </div>
+          <div style="font-weight:700;font-size:0.875rem;min-width:48px;text-align:right;" id="hist-item-line-${item._idx}">$${((parseFloat(item.price)||0)*(parseInt(item.qty)||1)).toFixed(2)}</div>
+          <button onclick="deleteHistItem(${item._idx})" style="background:none;border:none;cursor:pointer;color:#EF4444;font-size:0.85rem;padding:0.2rem;flex-shrink:0;">🗑️</button>
+        </div>
+      </div>`;
+    });
+    html+=`<button onclick="addHistItem('${store}')" style="display:flex;align-items:center;gap:0.4rem;width:100%;padding:0.5rem 0.875rem;border:none;background:none;cursor:pointer;color:var(--green);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.8rem;">+ Add item to ${store}</button>`;
   });
-  html+=`<div class="divider"></div><div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Receipts</div><div id="hist-receipt-thumbs" class="receipt-thumbs">${(shop.receipts||[]).map(url=>`<img src="${url}" class="receipt-thumb">`).join('')}</div><label class="upload-area" style="margin-top:0.5rem;">📷 Upload receipt<input type="file" accept="image/*" multiple style="display:none;" onchange="uploadReceipts(this,'${shop.id}')"></label><div class="form-group" style="margin-top:0.75rem;"><label>Notes</label><textarea class="note-area" id="hist-notes-edit" placeholder="Add notes...">${shop.notes||''}</textarea></div><button class="btn btn-primary btn-sm mt-sm" onclick="saveHistNotes('${shop.id}')">Save Notes</button>`;
+
+  html+=`<button onclick="addHistItem('')" style="display:flex;align-items:center;gap:0.4rem;width:100%;padding:0.5rem 0.875rem;border:2px dashed var(--border);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text-muted);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.8rem;margin-top:0.5rem;">+ Add item</button>`;
+  html+=`<div class="divider"></div>
+  <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Receipts</div>
+  <div id="hist-receipt-thumbs" class="receipt-thumbs">${(shop.receipts||[]).map(url=>`<img src="${url}" class="receipt-thumb">`).join('')}</div>
+  <label class="upload-area" style="margin-top:0.5rem;">📷 Upload receipt<input type="file" accept="image/*" multiple style="display:none;" onchange="uploadReceipts(this,'${shop.id}')"></label>
+  <div class="form-group" style="margin-top:0.75rem;"><label>Notes</label><textarea class="note-area" id="hist-notes-edit" placeholder="Add notes...">${shop.notes||''}</textarea></div>
+  <button class="btn btn-primary btn-sm mt-sm" onclick="saveHistNotes('${shop.id}')">Save Notes</button>`;
+
   document.getElementById('hist-detail-content').innerHTML=html;
-  openModal('modal-history-detail');
+}
+
+function recalcHistTotals() {
+  const shop = _curHistShop;
+  const grand = (shop.items||[]).reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
+  const el = document.getElementById('hist-grand-total');
+  if (el) el.textContent = `$${grand.toFixed(2)}`;
+  // Update store subtotals
+  const groups={};
+  (shop.items||[]).forEach(i=>{ const k=i.store||'No Store'; if(!groups[k]) groups[k]=[]; groups[k].push(i); });
+  Object.entries(groups).forEach(([store,items])=>{
+    const st=items.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
+    const el2=document.getElementById(`hist-store-total-${store.replace(/\s/g,'_')}`);
+    if(el2) el2.textContent=`$${st.toFixed(2)}`;
+  });
+}
+
+async function saveHistToFirestore() {
+  const shop = _curHistShop; if (!shop) return;
+  const grand = (shop.items||[]).reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
+  await updateDoc(doc(db,`users/${uid()}/shopHistory/${shop.id}`), {items: shop.items, total: grand});
+}
+
+window.updateHistItem = async function(idx, field, val) {
+  const shop = _curHistShop; if (!shop || !shop.items[idx]) return;
+  shop.items[idx][field] = field==='qty' ? parseInt(val)||1 : parseFloat(val)||0;
+  // Update line total display
+  const lineEl = document.getElementById(`hist-item-line-${idx}`);
+  if (lineEl) lineEl.textContent = `$${((parseFloat(shop.items[idx].price)||0)*(parseInt(shop.items[idx].qty)||1)).toFixed(2)}`;
+  recalcHistTotals();
+  await saveHistToFirestore();
+};
+
+window.deleteHistItem = async function(idx) {
+  const shop = _curHistShop; if (!shop) return;
+  if (!confirm('Remove this item from history?')) return;
+  shop.items.splice(idx, 1);
+  recalcHistTotals();
+  await saveHistToFirestore();
+  renderHistDetail();
+};
+
+window.addHistItem = function(store) {
+  const name = prompt('Item name:'); if (!name) return;
+  const qty = parseInt(prompt('Quantity:', '1'))||1;
+  const price = parseFloat(prompt('Unit price ($):', '0'))||0;
+  _curHistShop.items.push({name, qty, price, store, category:''});
+  saveHistToFirestore();
+  renderHistDetail();
 };
 window.uploadReceipts=async function(input,shopId){
   const files=Array.from(input.files), urls=[];
@@ -1302,6 +1441,123 @@ window.showPage = function(page) {
     document.getElementById('hmenu-'+p)?.classList.remove('active');
   });
   document.getElementById('hmenu-'+page)?.classList.add('active');
+};
+
+// DINNER PLANS
+window.savePlan = async function() {
+  const name = document.getElementById('plan-name').value.trim();
+  if (!name) return alert('Please enter a plan.');
+  const date = document.getElementById('plan-date').value;
+  if (!date) return alert('Please select a date.');
+  const notes = document.getElementById('plan-notes').value.trim();
+  const editId = document.getElementById('edit-plan-id').value;
+  if (editId) {
+    await updateDoc(doc(db, `users/${uid()}/dinnerPlans/${editId}`), {name, date, notes});
+  } else {
+    await addDoc(userCol('dinnerPlans'), {name, date, notes, createdAt: serverTimestamp()});
+  }
+  document.getElementById('plan-name').value = '';
+  document.getElementById('plan-notes').value = '';
+  document.getElementById('edit-plan-id').value = '';
+  document.getElementById('add-plan-modal-title').textContent = 'Add Dinner Plans';
+  closeModal('modal-add-plan');
+  if (S.selDate) showDayPanel(S.selDate);
+};
+
+window.editPlan = function(id) {
+  const p = (S.plans||{})[id]; if (!p) return;
+  document.getElementById('add-plan-modal-title').textContent = 'Edit Dinner Plan';
+  document.getElementById('edit-plan-id').value = id;
+  document.getElementById('plan-name').value = p.name || '';
+  document.getElementById('plan-date').value = p.date || '';
+  document.getElementById('plan-notes').value = p.notes || '';
+  openModal('modal-add-plan');
+};
+
+window.deletePlan = async function(id) {
+  if (confirm('Remove this plan?')) {
+    await deleteDoc(doc(db, `users/${uid()}/dinnerPlans/${id}`));
+    if (S.selDate) showDayPanel(S.selDate);
+  }
+};
+
+window.openAddPlanForDate = function() {
+  document.getElementById('plan-date').value = S.selDate || todayStr();
+  document.getElementById('plan-name').value = '';
+  document.getElementById('plan-notes').value = '';
+  document.getElementById('edit-plan-id').value = '';
+  document.getElementById('add-plan-modal-title').textContent = 'Add Dinner Plans';
+  openModal('modal-add-plan');
+};
+
+// INGREDIENT PICKER
+let _ingrPickerTargetRow = null;
+let _ingrPickerTab = 'favorites';
+
+window.openIngrPicker = function(row) {
+  _ingrPickerTargetRow = row;
+  _ingrPickerTab = 'favorites';
+  document.getElementById('ingr-picker-search').value = '';
+  // Reset tabs
+  document.querySelectorAll('#modal-ingr-picker .modal-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#modal-ingr-picker .modal-tab')[0].classList.add('active');
+  document.getElementById('ingr-picker-favorites').classList.remove('hidden');
+  document.getElementById('ingr-picker-recent').classList.add('hidden');
+  renderIngrPickerFavorites('');
+  renderIngrPickerRecent('');
+  openModal('modal-ingr-picker');
+};
+
+window.switchIngrTab = function(tab, btn) {
+  _ingrPickerTab = tab;
+  document.querySelectorAll('#modal-ingr-picker .modal-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('ingr-picker-favorites').classList.toggle('hidden', tab !== 'favorites');
+  document.getElementById('ingr-picker-recent').classList.toggle('hidden', tab !== 'recent');
+  filterIngrPicker();
+};
+
+window.filterIngrPicker = function() {
+  const q = document.getElementById('ingr-picker-search').value.toLowerCase();
+  renderIngrPickerFavorites(q);
+  renderIngrPickerRecent(q);
+};
+
+function renderIngrPickerFavorites(q) {
+  const el = document.getElementById('ingr-picker-favorites'); if (!el) return;
+  const items = S.favItems.filter(fi => !q || fi.name.toLowerCase().includes(q));
+  if (!items.length) { el.innerHTML=`<div class="empty-state" style="padding:1rem;"><div class="empty-sub">${q?'No matches':'No favorite items saved yet'}</div></div>`; return; }
+  el.innerHTML = items.map(fi=>`
+    <div class="fav-item" onclick="pickIngredient('${fi.name.replace(/'/g,"\\'")}')">
+      <div class="fav-icon">⭐</div>
+      <div class="fav-info"><div class="fav-name">${fi.name}</div><div class="fav-sub">${fi.category||''}</div></div>
+    </div>`).join('');
+}
+
+function renderIngrPickerRecent(q) {
+  const el = document.getElementById('ingr-picker-recent'); if (!el) return;
+  // Collect unique item names from shopItems + shopHistory
+  const seen = new Set();
+  const items = [];
+  // From current shop items
+  S.shopItems.forEach(i => { if (i.name && !seen.has(i.name.toLowerCase())) { seen.add(i.name.toLowerCase()); items.push({name:i.name,sub:'On current list'}); } });
+  // From history
+  S.shopHistory.forEach(sh => { (sh.items||[]).forEach(i => { if (i.name && !seen.has(i.name.toLowerCase())) { seen.add(i.name.toLowerCase()); items.push({name:i.name,sub:'Past purchase'}); } }); });
+  const filtered = q ? items.filter(i=>i.name.toLowerCase().includes(q)) : items;
+  if (!filtered.length) { el.innerHTML=`<div class="empty-state" style="padding:1rem;"><div class="empty-sub">${q?'No matches':'No past items yet'}</div></div>`; return; }
+  el.innerHTML = filtered.map(i=>`
+    <div class="fav-item" onclick="pickIngredient('${i.name.replace(/'/g,"\\'")}')">
+      <div class="fav-icon">🕐</div>
+      <div class="fav-info"><div class="fav-name">${i.name}</div><div class="fav-sub">${i.sub}</div></div>
+    </div>`).join('');
+}
+
+window.pickIngredient = function(name) {
+  if (_ingrPickerTargetRow) {
+    const input = _ingrPickerTargetRow.querySelector('.ingr-name');
+    if (input) input.value = name;
+  }
+  closeModal('modal-ingr-picker');
 };
 
 console.log('cartlist ✓');
