@@ -1303,7 +1303,9 @@ window.saveItem = async function() {
   const name = document.getElementById('item-name').value.trim(); if(!name) return alert('Item name required.');
   const category = document.getElementById('item-category').value;
   const sv = document.getElementById('item-store').value;
-  const store = sv==='other' ? document.getElementById('item-store-other').value.trim() : sv;
+  let store;
+  if(sv==='other') { store=document.getElementById('item-store-other').value.trim(); }
+  else { const knownStore=allStores().find(s=>s.id===sv); store=knownStore?knownStore.id:sv; }
   const qty = parseInt(document.getElementById('item-qty').value)||1;
   const price = parseFloat(document.getElementById('item-price').value)||0;
   const notes = document.getElementById('item-notes').value.trim();
@@ -1598,16 +1600,37 @@ function renderShopItem(item) {
   return `<div class="shop-item${item.checked?' checked':''}" id="si-${item.id}"><div class="shop-checkbox${item.checked?' checked':''}" onclick="toggleShopItem('${item.id}',event)">${item.checked?'✓':''}</div><div class="shop-item-content" onclick="openItemDetail('${item.id}')"><div class="shop-item-name">${item.name}</div><div class="shop-item-meta">${hhBadge}${mealPills}${genPill}${item.category?`<span class="pill pill-earth">${item.category}</span>`:''}${sname?`<span style="font-size:0.7rem;color:var(--text-muted);">${sname}</span>`:''}</div></div><div class="shop-item-right"><input type="number" class="shop-item-qty" value="${item.qty||1}" min="1" onclick="event.stopPropagation()" onchange="updateItemQty('${item.id}',this.value)">${item.price?`<div class="shop-item-price">$${(parseFloat(item.price)*(item.qty||1)).toFixed(2)}</div>`:''}</div></div>`;
 }
 
+function resolveStoreId(storeValue) {
+  // Given a store value (could be an ID or a free-text name), return a canonical key
+  // First check if it matches a known store ID
+  const byId = allStores().find(s=>s.id===storeValue);
+  if (byId) return {key: byId.id, name: byId.name, store: byId};
+  // Then check if it matches a known store name (case-insensitive)
+  const byName = allStores().find(s=>s.name.toLowerCase()===(storeValue||'').toLowerCase());
+  if (byName) return {key: byName.id, name: byName.name, store: byName};
+  // Free-text "other" store
+  if (storeValue) return {key: '__other__:'+storeValue, name: storeValue, store: null};
+  return {key: '__none__', name: 'No Store Assigned', store: null};
+}
+
 function renderByStore(unchecked, checked) {
-  const groups={};
-  unchecked.forEach(i=>{ const k=i.store||'__none__'; if(!groups[k]) groups[k]=[]; groups[k].push(i); });
+  const groups={};  // key -> {name, store, items}
+  unchecked.forEach(i=>{
+    const {key, name, store} = resolveStoreId(i.store);
+    if(!groups[key]) groups[key]={name, store, items:[]};
+    groups[key].items.push(i);
+  });
   let html='';
-  Object.entries(groups).forEach(([k,items])=>{
-    const sname=k==='__none__'?'No Store Assigned':getStoreName(k);
-    const store=S.stores.find(s=>s.id===k);
-    const catOrder=store?.categories||[];
+  // Sort groups: known stores first (by name), then unknown, then none
+  const sortedKeys = Object.keys(groups).sort((a,b)=>{
+    if(a==='__none__') return 1; if(b==='__none__') return -1;
+    return groups[a].name.localeCompare(groups[b].name);
+  });
+  sortedKeys.forEach(k=>{
+    const {name, store, items} = groups[k];
+    const catOrder = store?.categories||[];
     const sorted=[...items].sort((a,b)=>{ const ai=catOrder.indexOf(a.category),bi=catOrder.indexOf(b.category); if(ai===-1&&bi===-1) return 0; if(ai===-1) return 1; if(bi===-1) return -1; return ai-bi; });
-    html+=`<div class="group-header"><span class="group-header-title">🏪 ${sname}</span></div>`+sorted.map(i=>renderShopItem(i)).join('');
+    html+=`<div class="group-header"><span class="group-header-title">🏪 ${name}</span></div>`+sorted.map(i=>renderShopItem(i)).join('');
   });
   if(checked.length) html+=`<div class="checked-section-title">✅ In Cart (${checked.length})</div>`+renderItemList(checked);
   return html;
@@ -1784,7 +1807,10 @@ window.saveShopItemEdit=async function(){
   const name=document.getElementById('edit-shop-name').value.trim();
   const category=document.getElementById('edit-shop-category').value;
   const sv=document.getElementById('edit-shop-store').value;
-  const store=sv==='other'?document.getElementById('edit-shop-store-other').value.trim():sv;
+  // Normalise: if the value looks like a store name rather than an ID, find the ID
+  let store;
+  if(sv==='other') { store=document.getElementById('edit-shop-store-other').value.trim(); }
+  else { const knownStore=allStores().find(s=>s.id===sv||s.name===sv); store=knownStore?knownStore.id:sv; }
   const qty=parseInt(document.getElementById('edit-shop-qty').value)||1;
   const price=parseFloat(document.getElementById('edit-shop-price').value)||0;
   const notes=document.getElementById('edit-shop-notes').value.trim();
