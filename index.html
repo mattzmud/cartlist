@@ -1058,27 +1058,38 @@ async function loadHouseholdData() {
   const profile = profileSnap.exists() ? profileSnap.data() : {};
   if (profile.householdOwnerUid) {
     // User is a guest — load owner's household doc to get permissions
-    const hhSnap = await getDoc(doc(db, `users/${profile.householdOwnerUid}/household/config`));
-    if (hhSnap.exists()) {
-      S.household = { ownerUid: profile.householdOwnerUid, ...hhSnap.data() };
-      subscribeHouseholdData();
-      renderSettingsPage();
+    const guestCode = profile.householdCode;
+    if (guestCode) {
+      const hhSnap = await getDoc(doc(db, `households/${guestCode}`));
+      if (hhSnap.exists()) {
+        S.household = { ownerUid: profile.householdOwnerUid, ...hhSnap.data() };
+        subscribeHouseholdData();
+        renderSettingsPage();
+      } else {
+        // Household was deleted — clear guest status
+        await updateDoc(userRef('profile/data'), { householdOwnerUid: null, householdCode: null });
+      }
     } else {
-      // Household was deleted — clear guest status
-      await updateDoc(userRef('profile/data'), { householdOwnerUid: null });
+      // Fallback: try reading from owner's user space (legacy)
+      const hhSnap = await getDoc(doc(db, `users/${profile.householdOwnerUid}/household/config`));
+      if (hhSnap.exists()) {
+        S.household = { ownerUid: profile.householdOwnerUid, ...hhSnap.data() };
+        subscribeHouseholdData();
+        renderSettingsPage();
+      } else {
+        await updateDoc(userRef('profile/data'), { householdOwnerUid: null });
+      }
     }
   } else {
     // Check if user is an owner with members
-    const membersSnap = await getDocs(collection(db, `users/${uid()}/household/config/members`));
-    // Actually load the config
     const hhConfigSnap = await getDoc(doc(db, `users/${uid()}/household/config`));
     if (hhConfigSnap.exists()) {
       S.householdCode = hhConfigSnap.data().code;
+      // Load members from /households/{code}/members
+      const mSnap = await getDocs(collection(db, `households/${S.householdCode}/members`));
+      S.householdMembers = [];
+      mSnap.forEach(d => S.householdMembers.push({id:d.id,...d.data()}));
     }
-    // Load members
-    const mSnap = await getDocs(collection(db, `users/${uid()}/household/members`));
-    S.householdMembers = [];
-    mSnap.forEach(d => S.householdMembers.push({id:d.id,...d.data()}));
     renderSettingsPage();
   }
 }
@@ -2568,29 +2579,34 @@ window.joinHousehold = async function() {
   if (code.length !== 6) { errEl.textContent = 'Please enter a 6-character code.'; errEl.style.display='block'; return; }
 
   try {
+    // Step 1: Read the household config from /households/{code}
     const snap = await getDoc(doc(db, `households/${code}`));
     if (!snap.exists()) { errEl.textContent = 'Code not found. Please check and try again.'; errEl.style.display='block'; return; }
     const hh = snap.data();
     if (hh.ownerUid === uid()) { errEl.textContent = "That's your own household code!"; errEl.style.display='block'; return; }
 
     const myName = S.profile?.firstName || S.user.email.split('@')[0];
-    // Record membership under owner's profile
-    await setDoc(doc(db, `users/${hh.ownerUid}/household/members/${uid()}`), {
+
+    // Step 2: Write membership to /households/{code}/members/{uid}
+    // This keeps all writes within the /households collection where any auth'd user can write
+    await setDoc(doc(db, `households/${code}/members/${uid()}`), {
       uid: uid(), firstName: myName, joinedAt: new Date().toISOString()
     });
-    // Record in guest's profile
-    await updateDoc(userRef('profile/data'), { householdOwnerUid: hh.ownerUid });
+
+    // Step 3: Record owner link in guest's own profile (allowed — own user space)
+    await updateDoc(userRef('profile/data'), { householdOwnerUid: hh.ownerUid, householdCode: code });
+
     S.profile.householdOwnerUid = hh.ownerUid;
+    S.profile.householdCode = code;
     S.household = hh;
     subscribeHouseholdData();
     closeModal('modal-hh-join');
     renderSettingsPage();
-    // Refresh all shared views
     renderShoppingList(); renderCalendar(); renderTodayMeals();
     alert(`You've joined ${hh.ownerName}'s household! You now have access to their shared content.`);
   } catch(e) {
-    console.error(e);
-    errEl.textContent = 'Something went wrong. Please try again.';
+    console.error('joinHousehold error:', e);
+    errEl.textContent = `Error: ${e.code || e.message || 'Something went wrong'}. Check console for details.`;
     errEl.style.display = 'block';
   }
 };
@@ -2600,7 +2616,11 @@ window.leaveHousehold = async function() {
   const ownerName = S.household.ownerName || 'this household';
   if (!confirm(`Leave ${ownerName}'s household? You'll go back to your personal data only.`)) return;
   // Remove from owner's members
-  await deleteDoc(doc(db, `users/${S.household.ownerUid}/household/members/${uid()}`));
+  // Remove from /households/{code}/members
+  const leaveCode = S.profile.householdCode || S.household.code;
+  if (leaveCode) {
+    try { await deleteDoc(doc(db, `households/${leaveCode}/members/${uid()}`)); } catch(e) { console.warn('leave cleanup:', e); }
+  }
   // Clear guest link from own profile
   await updateDoc(userRef('profile/data'), { householdOwnerUid: null });
   S.profile.householdOwnerUid = null;
@@ -2614,7 +2634,9 @@ window.leaveHousehold = async function() {
 
 window.revokeMember = async function(memberUid) {
   if (!confirm('Revoke this person\'s access?')) return;
-  await deleteDoc(doc(db, `users/${uid()}/household/members/${memberUid}`));
+  if (S.householdCode) {
+    await deleteDoc(doc(db, `households/${S.householdCode}/members/${memberUid}`));
+  }
   // Clear their guest link
   try { await updateDoc(doc(db, `users/${memberUid}/profile/data`), { householdOwnerUid: null }); } catch(e) {}
   S.householdMembers = S.householdMembers.filter(m => m.id !== memberUid);
