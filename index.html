@@ -221,6 +221,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   #app { padding-bottom: 0; max-width: 900px; margin: 0 auto; }
   .bottom-nav { display: none; }
   .hamburger-btn { display: inline-flex !important; }
+  .mobile-only { display: none !important; }
   .hamburger-menu { display: block !important; }
   .modal { border-radius: var(--radius-lg); max-height: 85vh; margin: auto; }
   .modal-overlay { align-items: center; }
@@ -255,6 +256,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .stock-ok { background: var(--green); }
 .stock-low { background: #F59E0B; }
 .stock-restock { background: #EF4444; }
+.mobile-only { display: flex; }
 .hidden { display: none !important; }
 .mt-sm { margin-top: 0.5rem; }
 .mt-md { margin-top: 1rem; }
@@ -279,6 +281,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <div class="top-logo" onclick="showPage('home')" style="cursor:pointer;">cartlist</div>
     <div class="top-bar-actions">
       <button class="hamburger-btn" onclick="toggleHamburger()" id="hamburger-btn">Menu</button>
+      <button class="icon-btn mobile-only" onclick="showPage('settings')" title="Settings" style="flex-shrink:0;">⚙️</button>
       <button class="btn btn-outline btn-sm" onclick="doLogout()" style="font-size:0.8rem;padding:0.4rem 0.875rem;">Sign out</button>
     </div>
   </div>
@@ -289,8 +292,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <div class="welcome-name" id="welcome-name">Welcome! 👋</div>
       <div class="welcome-date" id="welcome-date"></div>
     </div>
-    <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.5;margin-bottom:1.25rem;">Welcome to cartlist, your smart shopping and home inventory companion. Start building your shopping list, creating your meal plan, or taking inventory of your pantry by making a selection below.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.875rem;">
+    <div style="background:var(--card);border-radius:var(--radius-sm);padding:0.875rem 1rem;margin-bottom:1.25rem;border:1.5px solid var(--border);font-size:0.85rem;color:var(--text-muted);line-height:1.5;">Welcome to cartlist, your smart shopping and home inventory companion. Start building your shopping list, creating your meal plan, or taking inventory of your pantry by making a selection below.</div>
+    <div class="action-cards">
       <div class="action-card" onclick="openModal('modal-add-item')">
         <div class="action-icon" style="background:#E8F5E9;">🛒</div>
         <div class="action-card-body"><div class="action-card-title">Add an Item</div><div class="action-card-sub">Add an item to your shopping list</div></div>
@@ -425,8 +428,15 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <!-- HOUSEHOLD SECTION — rendered dynamically -->
     <div id="settings-household-section"></div>
     <div class="settings-section">
-      <div class="settings-section-title">Danger Zone</div>
-      <div class="settings-row" style="border-color:#FEE2E2;" onclick="doLogout()"><div class="settings-row-label" style="color:#DC2626;">Sign Out</div><div style="color:#DC2626;">→</div></div>
+      <div class="settings-section-title">Account Actions</div>
+      <div class="settings-row" onclick="openModal('modal-change-password')">
+        <div><div class="settings-row-label">🔑 Change Password</div><div class="settings-row-sub">Update your account password</div></div>
+        <div style="color:var(--text-muted);">›</div>
+      </div>
+      <div class="settings-row" style="border-color:#FEE2E2;" onclick="doLogout()">
+        <div class="settings-row-label" style="color:#DC2626;">Sign Out</div>
+        <div style="color:#DC2626;">→</div>
+      </div>
     </div>
   </div>
 
@@ -822,9 +832,30 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div id="uncategorized-content"></div>
 </div></div>
 
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="modal-change-password"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Change Password</span><button class="modal-close" onclick="closeModal('modal-change-password')">✕</button></div>
+  <div id="change-pw-error" style="background:#FEE2E2;color:#DC2626;padding:0.75rem 1rem;border-radius:var(--radius-sm);font-size:0.875rem;margin-bottom:1rem;display:none;"></div>
+  <div id="change-pw-success" style="background:#E8F5E9;color:#2E7D32;padding:0.75rem 1rem;border-radius:var(--radius-sm);font-size:0.875rem;margin-bottom:1rem;display:none;">✅ Password updated successfully!</div>
+  <div class="form-group">
+    <label>Current Password</label>
+    <input type="password" id="pw-current" placeholder="Enter current password" autocomplete="current-password">
+  </div>
+  <div class="form-group">
+    <label>New Password</label>
+    <input type="password" id="pw-new" placeholder="At least 6 characters" autocomplete="new-password">
+  </div>
+  <div class="form-group">
+    <label>Confirm New Password</label>
+    <input type="password" id="pw-confirm" placeholder="Repeat new password" autocomplete="new-password">
+  </div>
+  <button class="btn btn-primary mt-md" onclick="doChangePassword()">Update Password</button>
+</div></div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
@@ -1075,12 +1106,13 @@ window.showPage = function(page) {
   if(page==='shopping') renderShoppingList();
   if(page==='stores') renderStores();
   if(page==='inventory') renderInvPage();
+  if(page==='settings') renderSettingsPage();
 };
 
 // MODALS
 window.openModal = function(id) {
   document.getElementById(id)?.classList.add('open');
-  if(id==='modal-add-item') populateCatSelects();
+  if(id==='modal-add-item') { populateCatSelects(); populateStoreDropdowns(); populateItemInvLocations(); }
   if(id==='modal-add-store') { populateStoreCatSelect(); }
   if(id==='modal-favorites') renderModalFavs();
   if(id==='modal-hh-share') renderInvPermToggles();
@@ -2746,6 +2778,40 @@ window.onItemCategoryChange = function() {
   if (!cat || !locSel) return;
   const loc = S.locations.find(l=>(l.categories||[]).includes(cat));
   if (loc) locSel.value = loc.id;
+};
+
+// Change Password
+window.doChangePassword = async function() {
+  const current = document.getElementById('pw-current').value;
+  const newPw = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+  const errEl = document.getElementById('change-pw-error');
+  const okEl = document.getElementById('change-pw-success');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+
+  if (!current || !newPw || !confirm) { errEl.textContent='Please fill in all fields.'; errEl.style.display='block'; return; }
+  if (newPw.length < 6) { errEl.textContent='New password must be at least 6 characters.'; errEl.style.display='block'; return; }
+  if (newPw !== confirm) { errEl.textContent='New passwords do not match.'; errEl.style.display='block'; return; }
+
+  try {
+    const credential = EmailAuthProvider.credential(S.user.email, current);
+    await reauthenticateWithCredential(S.user, credential);
+    await updatePassword(S.user, newPw);
+    okEl.style.display = 'block';
+    document.getElementById('pw-current').value = '';
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pw-confirm').value = '';
+    setTimeout(() => { closeModal('modal-change-password'); okEl.style.display='none'; }, 2500);
+  } catch(e) {
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      errEl.textContent = 'Current password is incorrect.';
+    } else if (e.code === 'auth/too-many-requests') {
+      errEl.textContent = 'Too many attempts. Please try again later.';
+    } else {
+      errEl.textContent = 'Something went wrong. Please try again.';
+    }
+    errEl.style.display = 'block';
+  }
 };
 
 console.log('cartlist ✓');
