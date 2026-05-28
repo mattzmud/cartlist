@@ -242,6 +242,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .hamburger-menu .nav-item .nav-icon { font-size: 1.3rem; }
 .hamburger-menu .nav-item.active { background: #E8F5E9; color: var(--green); }
 .hamburger-menu-title { font-family: 'Nunito', sans-serif; font-size: 1.25rem; font-weight: 900; color: var(--green); margin-bottom: 1rem; padding: 0.25rem 1rem; }
+.hh-badge { background: #E0F2FE; color: #0369A1; font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 100px; font-weight: 700; font-family: 'Nunito', sans-serif; }
 .hidden { display: none !important; }
 .mt-sm { margin-top: 0.5rem; }
 .mt-md { margin-top: 1rem; }
@@ -382,7 +383,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <div class="page-title">Settings</div>
     <div class="settings-section">
       <div class="settings-section-title">Account</div>
-      <div class="settings-row">
+      <div class="settings-row" style="cursor:default;">
         <div style="flex:1;">
           <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">First Name</div>
           <div style="display:flex;gap:0.5rem;align-items:center;">
@@ -398,6 +399,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <div class="settings-row" onclick="showPage('stores')"><div><div class="settings-row-label">🏪 Stores</div><div class="settings-row-sub">Manage stores &amp; category order</div></div><div style="color:var(--text-muted);">›</div></div>
       <div class="settings-row" onclick="openManageCategories()"><div><div class="settings-row-label">🏷️ Categories</div><div class="settings-row-sub">Manage item categories</div></div><div style="color:var(--text-muted);">›</div></div>
     </div>
+    <!-- HOUSEHOLD SECTION — rendered dynamically -->
+    <div id="settings-household-section"></div>
     <div class="settings-section">
       <div class="settings-section-title">Danger Zone</div>
       <div class="settings-row" style="border-color:#FEE2E2;" onclick="doLogout()"><div class="settings-row-label" style="color:#DC2626;">Sign Out</div><div style="color:#DC2626;">→</div></div>
@@ -593,7 +596,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="modal-handle"></div>
   <div class="modal-title"><span>Complete Shop</span><button class="modal-close" onclick="closeModal('modal-complete-shop')">✕</button></div>
   <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">Checked items move to history. Unchecked items remain on the list.</p>
-  <div class="form-group"><label>Notes for this shop</label><textarea class="note-area" id="complete-shop-notes" placeholder="How did the shop go?"></textarea></div>
+  <div class="form-group"><label>Trip Notes <span style="font-size:0.7rem;color:var(--text-muted);">(shared if household items)</span></label><textarea class="note-area" id="complete-shop-notes" placeholder="How did the shop go?"></textarea></div>
+  <div class="form-group" id="personal-note-row"><label>Personal Note <span style="font-size:0.7rem;color:var(--text-muted);">(only visible to you)</span></label><textarea class="note-area" id="complete-shop-personal-notes" placeholder="Your private note..."></textarea></div>
   <div id="complete-shop-summary" style="margin-bottom:1rem;"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
     <button class="btn btn-outline" onclick="closeModal('modal-complete-shop')">Cancel</button>
@@ -622,6 +626,53 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <button class="btn btn-primary btn-sm" onclick="addFavItemToList()">+ Add to List</button>
   </div>
 </div></div>
+<!-- HOUSEHOLD SHARE MODAL (owner generates code) -->
+<div class="modal-overlay" id="modal-hh-share"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Share Household</span><button class="modal-close" onclick="closeModal('modal-hh-share')">✕</button></div>
+  <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Generate a code and share it. Choose what this person can access.</p>
+  <div style="margin-bottom:1.25rem;">
+    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Access Permissions</div>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+        <div><div style="font-weight:700;font-size:0.9rem;">🛒 Shopping List</div><div style="font-size:0.75rem;color:var(--text-muted);">View, add, check off items + history</div></div>
+        <input type="checkbox" id="perm-shopping" checked style="width:18px;height:18px;">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+        <div><div style="font-weight:700;font-size:0.9rem;">📅 Meal Calendar</div><div style="font-size:0.75rem;color:var(--text-muted);">View and add meals &amp; dinner plans</div></div>
+        <input type="checkbox" id="perm-meals" checked style="width:18px;height:18px;">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+        <div><div style="font-weight:700;font-size:0.9rem;">⭐ Favorites</div><div style="font-size:0.75rem;color:var(--text-muted);">View and use saved meals &amp; items</div></div>
+        <input type="checkbox" id="perm-favorites" style="width:18px;height:18px;">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+        <div><div style="font-weight:700;font-size:0.9rem;">🏪 Stores</div><div style="font-size:0.75rem;color:var(--text-muted);">View and use your saved stores</div></div>
+        <input type="checkbox" id="perm-stores" style="width:18px;height:18px;">
+      </label>
+    </div>
+  </div>
+  <div id="hh-code-display" class="hidden" style="background:linear-gradient(135deg,var(--black),#2D1B69);border-radius:var(--radius);padding:1.5rem;text-align:center;margin-bottom:1rem;">
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);margin-bottom:0.5rem;">HOUSEHOLD CODE</div>
+    <div id="hh-code-value" style="font-family:'Nunito',sans-serif;font-size:2rem;font-weight:900;color:var(--green-light);letter-spacing:0.2em;">——</div>
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:0.5rem;">Share this code with your household member</div>
+  </div>
+  <button class="btn btn-primary" onclick="generateHouseholdCode()" id="hh-generate-btn">Generate Code</button>
+</div></div>
+
+<!-- JOIN HOUSEHOLD MODAL (guest enters code) -->
+<div class="modal-overlay" id="modal-hh-join"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Join a Household</span><button class="modal-close" onclick="closeModal('modal-hh-join')">✕</button></div>
+  <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Enter the 6-character code shared with you. Your personal data stays intact and accessible.</p>
+  <div class="form-group">
+    <label>Household Code</label>
+    <input type="text" id="hh-join-code" placeholder="e.g. GR4X9K" maxlength="6" style="text-transform:uppercase;letter-spacing:0.2em;font-size:1.25rem;font-weight:700;font-family:'Nunito',sans-serif;text-align:center;">
+  </div>
+  <div id="hh-join-error" style="color:#DC2626;font-size:0.85rem;margin-bottom:0.75rem;display:none;"></div>
+  <button class="btn btn-primary" onclick="joinHousehold()">Join Household</button>
+</div></div>
+
 <!-- INGREDIENT PICKER MODAL -->
 <div class="modal-overlay" id="modal-ingr-picker"><div class="modal">
   <div class="modal-handle"></div>
@@ -638,7 +689,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
@@ -658,6 +709,11 @@ const storage = getStorage(fbApp);
 const S = {
   user: null, profile: null,
   meals: {}, plans: {}, shopItems: [], favMeals: [], favItems: [], stores: [], shopHistory: [],
+  // Household
+  household: null,         // { ownerUid, code, permissions:{meals,shopping,favorites,stores} } — set if user is a GUEST
+  householdMembers: [],    // [ { uid, firstName, joinedAt } ] — set if user is OWNER
+  hhMeals: {}, hhPlans: {}, hhShopItems: [], hhFavMeals: [], hhFavItems: [], hhStores: [], hhShopHistory: [],
+  hhUnsubs: [],
   categories: ["Produce","Dairy","Meat & Seafood","Deli","Bakery","Frozen","Pantry","Snacks","Beverages","Household","Health & Wellness","Personal Care","Arts & Crafts","Other"],
   calY: new Date().getFullYear(), calM: new Date().getMonth(),
   histCalY: new Date().getFullYear(), histCalM: new Date().getMonth(),
@@ -670,6 +726,17 @@ window._S = S;
 function uid() { return S.user?.uid; }
 function userRef(p) { return doc(db, `users/${uid()}/${p}`); }
 function userCol(p) { return collection(db, `users/${uid()}/${p}`); }
+function ownerUid() { return S.household?.ownerUid || uid(); }
+function hhRef(p) { return doc(db, `users/${ownerUid()}/${p}`); }
+function hhCol(p) { return collection(db, `users/${ownerUid()}/${p}`); }
+function canAccess(perm) { if (!S.household) return true; return !!S.household.permissions?.[perm]; }
+function isGuest() { return !!S.household; }
+function isOwner() { return !S.household; }
+
+// Generate a random 6-char household code
+function genCode() {
+  return Math.random().toString(36).substring(2,8).toUpperCase();
+}
 
 function fmtDate(d) {
   if (!d) return '';
@@ -716,6 +783,7 @@ onAuthStateChanged(auth, async user => {
     await loadProfile();
     initListeners();
     initUI();
+    await loadHouseholdData();
   } else {
     S.user = null;
     document.getElementById('auth-screen').style.display = 'flex';
@@ -740,12 +808,65 @@ async function loadProfile() {
 function initListeners() {
   S.unsubs.push(onSnapshot(userCol('meals'), s => { S.meals={}; s.forEach(d=>S.meals[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); renderShoppingList(); }));
   S.unsubs.push(onSnapshot(userCol('dinnerPlans'), s => { S.plans={}; s.forEach(d=>S.plans[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); }));
-  S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data()})); renderShoppingList(); updateCartTotal(); }));
+  S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data(),_owner:'personal'})); renderShoppingList(); updateCartTotal(); }));
   S.unsubs.push(onSnapshot(userCol('favMeals'), s => { S.favMeals=[]; s.forEach(d=>S.favMeals.push({id:d.id,...d.data()})); renderFavPage(); renderModalFavs(); }));
   S.unsubs.push(onSnapshot(userCol('favItems'), s => { S.favItems=[]; s.forEach(d=>S.favItems.push({id:d.id,...d.data()})); renderFavItemsPage(); renderModalFavItems(); }));
   S.unsubs.push(onSnapshot(userCol('stores'), s => { S.stores=[]; s.forEach(d=>S.stores.push({id:d.id,...d.data()})); renderStores(); populateStoreDropdowns(); }));
-  S.unsubs.push(onSnapshot(userCol('shopHistory'), s => { S.shopHistory=[]; s.forEach(d=>S.shopHistory.push({id:d.id,...d.data()})); renderHistCalendar(); renderHistList(); }));
+  S.unsubs.push(onSnapshot(userCol('shopHistory'), s => { S.shopHistory=[]; s.forEach(d=>S.shopHistory.push({id:d.id,...d.data(),_owner:'personal'})); renderHistCalendar(); renderHistList(); }));
   getDoc(userRef('config/categories')).then(s => { if(s.exists()&&s.data().list) S.categories=s.data().list; populateCatSelects(); });
+}
+
+async function loadHouseholdData() {
+  // Check if user is a guest in someone's household
+  const profileSnap = await getDoc(userRef('profile/data'));
+  const profile = profileSnap.exists() ? profileSnap.data() : {};
+  if (profile.householdOwnerUid) {
+    // User is a guest — load owner's household doc to get permissions
+    const hhSnap = await getDoc(doc(db, `users/${profile.householdOwnerUid}/household/config`));
+    if (hhSnap.exists()) {
+      S.household = { ownerUid: profile.householdOwnerUid, ...hhSnap.data() };
+      subscribeHouseholdData();
+      renderSettingsPage();
+    } else {
+      // Household was deleted — clear guest status
+      await updateDoc(userRef('profile/data'), { householdOwnerUid: null });
+    }
+  } else {
+    // Check if user is an owner with members
+    const membersSnap = await getDocs(collection(db, `users/${uid()}/household/config/members`));
+    // Actually load the config
+    const hhConfigSnap = await getDoc(doc(db, `users/${uid()}/household/config`));
+    if (hhConfigSnap.exists()) {
+      S.householdCode = hhConfigSnap.data().code;
+    }
+    // Load members
+    const mSnap = await getDocs(collection(db, `users/${uid()}/household/members`));
+    S.householdMembers = [];
+    mSnap.forEach(d => S.householdMembers.push({id:d.id,...d.data()}));
+    renderSettingsPage();
+  }
+}
+
+function subscribeHouseholdData() {
+  // Unsubscribe any existing hh listeners
+  S.hhUnsubs.forEach(u=>u()); S.hhUnsubs=[];
+  const p = S.household?.permissions || {};
+
+  if (p.shopping) {
+    S.hhUnsubs.push(onSnapshot(hhCol('shopItems'), s => { S.hhShopItems=[]; s.forEach(d=>S.hhShopItems.push({id:d.id,...d.data(),_owner:'household'})); renderShoppingList(); updateCartTotal(); }));
+    S.hhUnsubs.push(onSnapshot(hhCol('shopHistory'), s => { S.hhShopHistory=[]; s.forEach(d=>S.hhShopHistory.push({id:d.id,...d.data(),_owner:'household'})); renderHistCalendar(); renderHistList(); }));
+  }
+  if (p.meals) {
+    S.hhUnsubs.push(onSnapshot(hhCol('meals'), s => { S.hhMeals={}; s.forEach(d=>S.hhMeals[d.id]={id:d.id,...d.data(),_owner:'household'}); renderCalendar(); renderTodayMeals(); }));
+    S.hhUnsubs.push(onSnapshot(hhCol('dinnerPlans'), s => { S.hhPlans={}; s.forEach(d=>S.hhPlans[d.id]={id:d.id,...d.data(),_owner:'household'}); renderCalendar(); renderTodayMeals(); }));
+  }
+  if (p.favorites) {
+    S.hhUnsubs.push(onSnapshot(hhCol('favMeals'), s => { S.hhFavMeals=[]; s.forEach(d=>S.hhFavMeals.push({id:d.id,...d.data(),_owner:'household'})); renderFavPage(); renderModalFavs(); }));
+    S.hhUnsubs.push(onSnapshot(hhCol('favItems'), s => { S.hhFavItems=[]; s.forEach(d=>S.hhFavItems.push({id:d.id,...d.data(),_owner:'household'})); renderFavItemsPage(); renderModalFavItems(); }));
+  }
+  if (p.stores) {
+    S.hhUnsubs.push(onSnapshot(hhCol('stores'), s => { S.hhStores=[]; s.forEach(d=>S.hhStores.push({id:d.id,...d.data(),_owner:'household'})); renderStores(); populateStoreDropdowns(); }));
+  }
 }
 
 function initUI() {
@@ -821,7 +942,11 @@ function populateStoreDropdowns() {
     const sel = document.getElementById(id); if(!sel) return;
     const cur = sel.value;
     sel.innerHTML = '<option value="">No preference</option>';
-    S.stores.forEach(st => { const o=document.createElement('option'); o.value=st.id; o.textContent=st.name; sel.appendChild(o); });
+    allStores().forEach(st => {
+      const o=document.createElement('option'); o.value=st.id;
+      o.textContent=st._owner==='household'?`🏠 ${st.name}`:st.name;
+      sel.appendChild(o);
+    });
     sel.innerHTML += '<option value="other">Other...</option>';
     if(cur) sel.value = cur;
   });
@@ -900,7 +1025,9 @@ function resetItemModal() {
 
 window.removeShopItem = async function() {
   if(!S.curShopItem) return;
-  await deleteDoc(doc(db,`users/${uid()}/shopItems/${S.curShopItem.id}`));
+  const item=S.curShopItem;
+  const path=item._owner==='household'?`users/${ownerUid()}/shopItems/${item.id}`:`users/${uid()}/shopItems/${item.id}`;
+  await deleteDoc(doc(db,path));
   closeModal('modal-item-detail'); S.curShopItem=null;
 };
 
@@ -988,20 +1115,24 @@ window.selectCalDate=function(ds){S.selDate=ds;renderCalendar();showDayPanel(ds)
 function showDayPanel(ds) {
   const panel=document.getElementById('day-panel'); panel.classList.add('visible');
   document.getElementById('day-panel-title').textContent=fmtDate(ds);
-  const dayMeals=Object.values(S.meals).filter(m=>m.date===ds);
-  const dayPlans=Object.values(S.plans||{}).filter(p=>p.date===ds);
+  const dayMeals=allMeals().filter(m=>m.date===ds);
+  const dayPlans=allPlans().filter(p=>p.date===ds);
   const el=document.getElementById('day-panel-meals');
   if(!dayMeals.length && !dayPlans.length){el.innerHTML='<div class="empty-state" style="padding:1rem 0;"><div class="empty-sub">No meals or plans on this date.</div></div>';return;}
-  const mealHTML=dayMeals.map(m=>`<div class="meal-item"><div class="meal-color-dot" style="background:${mealColor(m.name)}"></div><div class="meal-info"><div class="meal-name">${m.name}</div><div class="meal-meta"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}</div>${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}</div><button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;">🗑️</button></div>`).join('');
+  const mealHTML=dayMeals.map(m=>`<div class="meal-item"><div class="meal-color-dot" style="background:${mealColor(m.name)}"></div><div class="meal-info"><div class="meal-name">${m.name}${m._owner==='household'?' <span class="pill pill-blue" style="font-size:0.6rem;">🏠</span>':''}</div><div class="meal-meta"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}</div>${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}</div>${m._owner!=='household'?`<button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;">🗑️</button>`:''}</div>`).join('');
   const planHTML=dayPlans.map(p=>`<div class="plan-card"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">${p.notes}</div>`:''}</div><button onclick="editPlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;margin-right:0.25rem;">✏️</button><button onclick="deletePlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;">🗑️</button></div>`).join('');
   el.innerHTML=planHTML+mealHTML;
 }
-window.deleteMeal=async function(id){if(confirm('Remove this meal?')){await deleteDoc(doc(db,`users/${uid()}/meals/${id}`));if(S.selDate)showDayPanel(S.selDate);}};
+window.deleteMeal=async function(id){
+  const meal=allMeals().find(m=>m.id===id);
+  if(!meal||meal._owner==='household') return;
+  if(confirm('Remove this meal?')){await deleteDoc(doc(db,`users/${uid()}/meals/${id}`));if(S.selDate)showDayPanel(S.selDate);}
+};
 
 function renderTodayMeals() {
   const el=document.getElementById('home-today-meals'); const t=todayStr();
-  const tm=Object.values(S.meals).filter(m=>m.date===t);
-  const tp=Object.values(S.plans||{}).filter(p=>p.date===t);
+  const tm=allMeals().filter(m=>m.date===t);
+  const tp=allPlans().filter(p=>p.date===t);
   if(!tm.length && !tp.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">🍽️</span><div class="empty-title">No meals or plans today</div><div class="empty-sub">Add a meal to get started</div></div>`;return;}
   const planHTML=tp.map(p=>`<div class="plan-card" style="margin-bottom:0.625rem;"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);">${p.notes}</div>`:''}</div><span class="pill pill-orange">Dinner Plan</span></div>`).join('');
   const mealHTML=tm.map(m=>`<div class="card" style="display:flex;align-items:center;gap:0.75rem;padding:1rem;margin-bottom:0.625rem;"><div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div><div style="flex:1;"><div style="font-family:'Nunito',sans-serif;font-weight:800;">${m.name}</div><div style="display:flex;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).length?`<span class="pill pill-gray">${m.ingredients.length} ingredients</span>`:''}</div></div></div>`).join('');
@@ -1011,13 +1142,20 @@ function renderTodayMeals() {
 // FAVORITES
 function renderFavPage() {
   const el=document.getElementById('fav-meals-list'); if(!el) return;
-  if(!S.favMeals.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">⭐</span><div class="empty-title">No favorite meals yet</div><div class="empty-sub">Save a meal as favorite when adding it</div></div>`;return;}
-  el.innerHTML=S.favMeals.map(fm=>`<div class="fav-item" onclick="openFavMealDetail('${fm.id}')"><div class="fav-icon">🍽️</div><div class="fav-info"><div class="fav-name">${fm.name}</div><div class="fav-sub">${(fm.ingredients||[]).length} ingredients${fm.notes?' · '+fm.notes.substring(0,30):''}</div></div><span style="color:var(--text-muted);">›</span></div>`).join('');
+  const meals=allFavMeals();
+  if(!meals.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">⭐</span><div class="empty-title">No favorite meals yet</div><div class="empty-sub">Save a meal as favorite when adding it</div></div>`;return;}
+  el.innerHTML=meals.map(fm=>`<div class="fav-item" onclick="openFavMealDetail('${fm.id}')">
+    <div class="fav-icon">🍽️</div>
+    <div class="fav-info">
+      <div class="fav-name">${fm.name}${fm._owner==='household'?' <span class="pill pill-blue" style="font-size:0.6rem;">🏠</span>':''}</div>
+      <div class="fav-sub">${(fm.ingredients||[]).length} ingredients${fm.notes?' · '+fm.notes.substring(0,30):''}</div>
+    </div><span style="color:var(--text-muted);">›</span></div>`).join('');
 }
 function renderFavItemsPage() {
   const el=document.getElementById('fav-items-list'); if(!el) return;
-  if(!S.favItems.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">⭐</span><div class="empty-title">No favorite items yet</div><div class="empty-sub">Save an item as favorite when adding it</div></div>`;return;}
-  el.innerHTML=S.favItems.map(fi=>`<div class="fav-item" onclick="openFavItemDetail('${fi.id}')">${fi.photoUrl?`<img src="${fi.photoUrl}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;">`:` <div class="fav-icon">🛒</div>`}<div class="fav-info"><div class="fav-name">${fi.name}</div><div class="fav-sub">${fi.category||'No category'}${fi.price?' · $'+parseFloat(fi.price).toFixed(2):''}</div></div><span style="color:var(--text-muted);">›</span></div>`).join('');
+  const items=allFavItems();
+  if(!items.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">⭐</span><div class="empty-title">No favorite items yet</div><div class="empty-sub">Save an item as favorite when adding it</div></div>`;return;}
+  el.innerHTML=items.map(fi=>`<div class="fav-item" onclick="openFavItemDetail('${fi.id}')">${fi.photoUrl?`<img src="${fi.photoUrl}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;">`:` <div class="fav-icon">🛒</div>`}<div class="fav-info"><div class="fav-name">${fi.name}${fi._owner==='household'?' <span class="pill pill-blue" style="font-size:0.6rem;">🏠</span>':''}</div><div class="fav-sub">${fi.category||'No category'}${fi.price?' · $'+parseFloat(fi.price).toFixed(2):''}</div></div><span style="color:var(--text-muted);">›</span></div>`).join('');
 }
 window.switchFavTab=function(tab,btn){
   document.querySelectorAll('#page-favorites .modal-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active');
@@ -1040,7 +1178,7 @@ window.switchModalFavTab=function(tab,btn){
   document.getElementById('modal-fav-items').classList.toggle('hidden',tab!=='items');
 };
 window.openFavMealDetail=function(id){
-  const fm=S.favMeals.find(f=>f.id===id); if(!fm) return;
+  const fm=allFavMeals().find(f=>f.id===id); if(!fm) return;
   S.curFavMeal=fm;
   document.getElementById('fav-meal-detail-name').textContent=fm.name;
   document.getElementById('fav-meal-detail-content').innerHTML=`${fm.type?`<div style="margin-bottom:0.75rem;"><span class="pill ${mealTypeClass(fm.type)}">${mealTypeLabel(fm.type)}</span></div>`:''}${fm.notes?`<div style="font-size:0.875rem;color:var(--text-muted);margin-bottom:0.875rem;padding:0.75rem;background:var(--bg);border-radius:var(--radius-sm);">${fm.notes}</div>`:''}<div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Ingredients</div>${(fm.ingredients||[]).map(i=>`<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;"><span>${i.name}</span><span style="color:var(--text-muted);">×${i.qty||1}</span></div>`).join('')}`;
@@ -1080,7 +1218,7 @@ window.saveAddToCalMeal=async function(){
   closeModal('modal-add-to-cal');
 };
 window.openFavItemDetail=function(id){
-  const fi=S.favItems.find(f=>f.id===id); if(!fi) return;
+  const fi=allFavItems().find(f=>f.id===id); if(!fi) return;
   S.curFavItem=fi;
   document.getElementById('fav-item-detail-name').textContent=fi.name;
   document.getElementById('fav-item-detail-content').innerHTML=`${fi.photoUrl?`<img src="${fi.photoUrl}" style="width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius-sm);margin-bottom:0.75rem;">`:''}<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">${fi.category?`<span class="pill pill-green">${fi.category}</span>`:''} ${fi.price?`<span class="pill pill-gray">$${parseFloat(fi.price).toFixed(2)}</span>`:''}</div>${fi.notes?`<div style="font-size:0.875rem;color:var(--text-muted);padding:0.75rem;background:var(--bg);border-radius:var(--radius-sm);">${fi.notes}</div>`:''}`;
@@ -1107,9 +1245,9 @@ window.addFavItemToList=async function(){
 function getVisibleItems() {
   const start=document.getElementById('range-start').value;
   const end=document.getElementById('range-end').value;
-  const rangeMeals=Object.values(S.meals).filter(m=>(!start||m.date>=start)&&(!end||m.date<=end));
+  const rangeMeals=allMeals().filter(m=>(!start||m.date>=start)&&(!end||m.date<=end));
   const rangeMealIds=new Set(rangeMeals.map(m=>m.id));
-  return S.shopItems.filter(i=>!i.mealId||rangeMealIds.has(i.mealId));
+  return allShopItems().filter(i=>!i.mealId||rangeMealIds.has(i.mealId));
 }
 
 window.renderShoppingList=function(){
@@ -1129,7 +1267,8 @@ function renderShopItem(item) {
   const sname=getStoreName(item.store);
   const mealPills=(item.mealNames||[]).filter(Boolean).map((mn,i)=>`<span class="pill ${pillClass(i)}">${mn}</span>`).join('');
   const genPill=(!item.mealId&&!(item.mealNames||[]).length)?`<span class="pill pill-gray">General</span>`:'';
-  return `<div class="shop-item${item.checked?' checked':''}" id="si-${item.id}"><div class="shop-checkbox${item.checked?' checked':''}" onclick="toggleShopItem('${item.id}',event)">${item.checked?'✓':''}</div><div class="shop-item-content" onclick="openItemDetail('${item.id}')"><div class="shop-item-name">${item.name}</div><div class="shop-item-meta">${mealPills}${genPill}${item.category?`<span class="pill pill-earth">${item.category}</span>`:''}${sname?`<span style="font-size:0.7rem;color:var(--text-muted);">${sname}</span>`:''}</div></div><div class="shop-item-right"><input type="number" class="shop-item-qty" value="${item.qty||1}" min="1" onclick="event.stopPropagation()" onchange="updateItemQty('${item.id}',this.value)">${item.price?`<div class="shop-item-price">$${(parseFloat(item.price)*(item.qty||1)).toFixed(2)}</div>`:''}</div></div>`;
+  const hhBadge=item._owner==='household'?`<span class="pill pill-blue">🏠</span>`:'';
+  return `<div class="shop-item${item.checked?' checked':''}" id="si-${item.id}"><div class="shop-checkbox${item.checked?' checked':''}" onclick="toggleShopItem('${item.id}',event)">${item.checked?'✓':''}</div><div class="shop-item-content" onclick="openItemDetail('${item.id}')"><div class="shop-item-name">${item.name}</div><div class="shop-item-meta">${hhBadge}${mealPills}${genPill}${item.category?`<span class="pill pill-earth">${item.category}</span>`:''}${sname?`<span style="font-size:0.7rem;color:var(--text-muted);">${sname}</span>`:''}</div></div><div class="shop-item-right"><input type="number" class="shop-item-qty" value="${item.qty||1}" min="1" onclick="event.stopPropagation()" onchange="updateItemQty('${item.id}',this.value)">${item.price?`<div class="shop-item-price">$${(parseFloat(item.price)*(item.qty||1)).toFixed(2)}</div>`:''}</div></div>`;
 }
 
 function renderByStore(unchecked, checked) {
@@ -1158,20 +1297,21 @@ function renderByCategory(unchecked, checked) {
 }
 
 function getStoreName(storeId) {
-  if(!storeId) return ''; const s=S.stores.find(st=>st.id===storeId); return s?s.name:storeId;
+  if(!storeId) return ''; const s=allStores().find(st=>st.id===storeId); return s?s.name:storeId;
 }
 
 window.toggleShopItem=async function(id,event){
-  event.stopPropagation(); const item=S.shopItems.find(i=>i.id===id); if(!item) return;
-  await updateDoc(doc(db,`users/${uid()}/shopItems/${id}`),{checked:!item.checked});
+  event.stopPropagation();
+  const item=allShopItems().find(i=>i.id===id); if(!item) return;
+  const colPath=item._owner==='household'?`users/${ownerUid()}/shopItems/${id}`:`users/${uid()}/shopItems/${id}`;
+  await updateDoc(doc(db,colPath),{checked:!item.checked});
 };
-window.updateItemQty=async function(id,val){ await updateDoc(doc(db,`users/${uid()}/shopItems/${id}`),{qty:parseInt(val)||1}); };
-function updateCartTotal(){
-  const checked=S.shopItems.filter(i=>i.checked);
-  const total=checked.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
-  document.getElementById('cart-total-display').textContent=`$${total.toFixed(2)}`;
-  document.getElementById('cart-items-count').textContent=`${checked.length} item${checked.length!==1?'s':''} checked`;
-}
+window.updateItemQty=async function(id,val){
+  const item=allShopItems().find(i=>i.id===id); if(!item) return;
+  const colPath=item._owner==='household'?`users/${ownerUid()}/shopItems/${id}`:`users/${uid()}/shopItems/${id}`;
+  await updateDoc(doc(db,colPath),{qty:parseInt(val)||1});
+};
+// updateCartTotal replaced by household-aware version above
 window.setShopView=function(view,btn){
   S.shopView=view;
   document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active');
@@ -1184,7 +1324,7 @@ window.showEstimate=function(){
 };
 window.clearEstimate=function(){ document.getElementById('estimate-bar').classList.remove('visible'); };
 window.completeShop=function(){
-  const checked=S.shopItems.filter(i=>i.checked); if(!checked.length) return alert('No items checked off yet.');
+  const checked=allShopItems().filter(i=>i.checked); if(!checked.length) return alert('No items checked off yet.');
   const stores=[...new Set(checked.map(i=>getStoreName(i.store)).filter(Boolean))];
   const total=checked.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
   document.getElementById('complete-shop-summary').innerHTML=`<div style="background:var(--bg);border-radius:var(--radius-sm);padding:0.875rem;"><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem;">Summary</div><div style="font-weight:700;">${checked.length} items · $${total.toFixed(2)}</div>${stores.length?`<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">${stores.join(', ')}</div>`:''}</div>`;
@@ -1195,14 +1335,24 @@ window.confirmCompleteShop=async function(){
   const notes=document.getElementById('complete-shop-notes').value.trim();
   const stores=[...new Set(checked.map(i=>getStoreName(i.store)).filter(Boolean))];
   const total=checked.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
-  await addDoc(userCol('shopHistory'),{date:todayStr(),notes,stores,total,items:checked.map(i=>({name:i.name,qty:i.qty||1,price:i.price||0,category:i.category||'',store:getStoreName(i.store)||'',mealNames:i.mealNames||[]})),receipts:[],createdAt:serverTimestamp()});
-  for(const item of checked) await deleteDoc(doc(db,`users/${uid()}/shopItems/${item.id}`));
+  const personalChecked = checked.filter(i=>i._owner!=='household');
+  const hhChecked = checked.filter(i=>i._owner==='household');
+  // Personal history entry (always personal)
+  if (personalChecked.length) {
+    await addDoc(userCol('shopHistory'),{date:todayStr(),notes,stores,total:personalChecked.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0),items:personalChecked.map(i=>({name:i.name,qty:i.qty||1,price:i.price||0,category:i.category||'',store:getStoreName(i.store)||'',mealNames:i.mealNames||[],_owner:'personal'})),receipts:[],_owner:'personal',createdAt:serverTimestamp()});
+    for(const item of personalChecked) await deleteDoc(doc(db,`users/${uid()}/shopItems/${item.id}`));
+  }
+  // Household history entry (if any hh items checked)
+  if (hhChecked.length && canAccess('shopping')) {
+    await addDoc(hhCol('shopHistory'),{date:todayStr(),notes,stores,total:hhChecked.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0),items:hhChecked.map(i=>({name:i.name,qty:i.qty||1,price:i.price||0,category:i.category||'',store:getStoreName(i.store)||'',mealNames:i.mealNames||[],_owner:'household'})),receipts:[],_owner:'household',createdAt:serverTimestamp()});
+    for(const item of hhChecked) await deleteDoc(doc(db,`users/${ownerUid()}/shopItems/${item.id}`));
+  }
   closeModal('modal-complete-shop');
 };
 
 // ITEM DETAIL
 window.openItemDetail=function(id){
-  const item=S.shopItems.find(i=>i.id===id); if(!item) return;
+  const item=allShopItems().find(i=>i.id===id); if(!item) return;
   S.curShopItem=item;
   document.getElementById('item-detail-name').textContent=item.name;
   const sname=getStoreName(item.store);
@@ -1232,7 +1382,9 @@ window.saveShopItemEdit=async function(){
   const qty=parseInt(document.getElementById('edit-shop-qty').value)||1;
   const price=parseFloat(document.getElementById('edit-shop-price').value)||0;
   const notes=document.getElementById('edit-shop-notes').value.trim();
-  await updateDoc(doc(db,`users/${uid()}/shopItems/${id}`),{name,category,store,qty,price,notes});
+  const editItem=allShopItems().find(i=>i.id===id);
+  const editPath=editItem?._owner==='household'?`users/${ownerUid()}/shopItems/${id}`:`users/${uid()}/shopItems/${id}`;
+  await updateDoc(doc(db,editPath),{name,category,store,qty,price,notes});
   closeModal('modal-edit-shop-item');
 };
 
@@ -1290,8 +1442,10 @@ window.saveStore=async function(){
 // Current history shop being viewed
 let _curHistShop = null;
 
-window.showHistDate=function(ds){
-  const shops=S.shopHistory.filter(sh=>sh.date===ds); if(!shops.length) return;
+window.showHistDate=function(ds, owner='personal', histId=null){
+  const histArr = owner==='household' ? S.hhShopHistory : S.shopHistory;
+  const shops = histId ? histArr.filter(sh=>sh.id===histId) : histArr.filter(sh=>sh.date===ds);
+  if(!shops.length) return;
   _curHistShop = JSON.parse(JSON.stringify(shops[shops.length-1])); // deep copy for editing
   renderHistDetail();
   openModal('modal-history-detail');
@@ -1413,7 +1567,8 @@ window.saveHistNotes=async function(shopId){
 function renderHistList(){
   const el=document.getElementById('history-list'); if(!el) return;
   if(!S.shopHistory.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">📋</span><div class="empty-title">No shop history yet</div><div class="empty-sub">Complete a shop to see your history</div></div>`;return;}
-  el.innerHTML=[...S.shopHistory].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(sh=>`<div class="shop-history-card" onclick="showHistDate('${sh.date}')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div class="shop-history-date">${fmtDate(sh.date)}</div><div class="shop-history-meta">${(sh.items||[]).length} items · ${(sh.stores||[]).join(', ')||'—'}</div></div><div class="shop-history-total">$${parseFloat(sh.total||0).toFixed(2)}</div></div></div>`).join('');
+  const allHist=[...S.shopHistory,...(canAccess('shopping')?S.hhShopHistory:[])];
+  el.innerHTML=[...allHist].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(sh=>`<div class="shop-history-card" onclick="showHistDate('${sh.date}','${sh._owner||'personal'}','${sh.id}')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div class="shop-history-date">${fmtDate(sh.date)}</div><div class="shop-history-meta">${(sh.items||[]).length} items · ${(sh.stores||[]).join(', ')||'—'}</div></div><div class="shop-history-total">$${parseFloat(sh.total||0).toFixed(2)}</div></div></div>`).join('');
 }
 
 window.saveFirstName = async function() {
@@ -1443,7 +1598,214 @@ window.showPage = function(page) {
   document.getElementById('hmenu-'+page)?.classList.add('active');
 };
 
+// ============================================================
+// HOUSEHOLD SHARING
+// ============================================================
+
+function renderSettingsPage() {
+  const el = document.getElementById('settings-household-section');
+  if (!el) return;
+
+  if (isGuest()) {
+    // USER IS A GUEST in someone else's household
+    const ownerName = S.household?.ownerName || 'someone';
+    const perms = S.household?.permissions || {};
+    const permList = Object.entries({meals:'Meal Calendar',shopping:'Shopping List',favorites:'Favorites',stores:'Stores'})
+      .filter(([k]) => perms[k]).map(([,v]) => v).join(', ') || 'Nothing yet';
+    el.innerHTML = `
+      <div class="settings-section">
+        <div class="settings-section-title">🏠 Household</div>
+        <div class="settings-row" style="cursor:default;flex-direction:column;align-items:flex-start;gap:0.5rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;width:100%;">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1rem;">${ownerName[0]?.toUpperCase()||'?'}</div>
+            <div style="flex:1;"><div style="font-weight:700;">${ownerName}'s Household</div><div style="font-size:0.75rem;color:var(--text-muted);">Access: ${permList}</div></div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="leaveHousehold()" style="width:100%;">Leave ${ownerName}'s Household</button>
+        </div>
+        <p style="font-size:0.75rem;color:var(--text-muted);padding:0 0.25rem;margin-top:0.5rem;">To share your own household, leave ${ownerName}'s first.</p>
+      </div>`;
+  } else {
+    // USER IS AN OWNER (or solo)
+    const members = S.householdMembers || [];
+    const memberHTML = members.length ? members.map(m => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:0.4rem;">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:0.9rem;">${(m.firstName||'?')[0].toUpperCase()}</div>
+        <div style="flex:1;"><div style="font-weight:700;font-size:0.9rem;">${m.firstName||'Member'}</div><div style="font-size:0.7rem;color:var(--text-muted);">Joined ${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : '—'}</div></div>
+        <button onclick="revokeMember('${m.id}')" class="btn btn-danger btn-sm">Revoke</button>
+      </div>`).join('') : `<div style="font-size:0.85rem;color:var(--text-muted);padding:0.5rem 0.25rem;">No members yet.</div>`;
+
+    el.innerHTML = `
+      <div class="settings-section">
+        <div class="settings-section-title">🏠 Household</div>
+        ${memberHTML}
+        <button class="btn btn-primary mt-sm" onclick="openModal('modal-hh-share')" style="background:var(--purple);">+ Invite Someone</button>
+        <div style="margin-top:0.75rem;">
+          <div class="settings-row" onclick="openModal('modal-hh-join')">
+            <div><div class="settings-row-label">Join a Household</div><div class="settings-row-sub">Enter a code shared with you</div></div>
+            <div style="color:var(--text-muted);">›</div>
+          </div>
+        </div>
+      </div>`;
+  }
+}
+
+window.generateHouseholdCode = async function() {
+  const permissions = {
+    shopping: document.getElementById('perm-shopping').checked,
+    meals: document.getElementById('perm-meals').checked,
+    favorites: document.getElementById('perm-favorites').checked,
+    stores: document.getElementById('perm-stores').checked,
+  };
+  const code = genCode();
+  const ownerName = S.profile?.firstName || S.user.email.split('@')[0];
+  // Save household config under owner's uid — indexed by code for lookup
+  await setDoc(doc(db, `households/${code}`), {
+    ownerUid: uid(), ownerName, permissions, code, createdAt: new Date().toISOString()
+  });
+  // Also save locally
+  await setDoc(doc(db, `users/${uid()}/household/config`), { code, permissions, ownerName });
+  S.householdCode = code;
+  document.getElementById('hh-code-value').textContent = code;
+  document.getElementById('hh-code-display').classList.remove('hidden');
+  document.getElementById('hh-generate-btn').textContent = 'Regenerate Code';
+};
+
+window.joinHousehold = async function() {
+  const code = document.getElementById('hh-join-code').value.trim().toUpperCase();
+  const errEl = document.getElementById('hh-join-error');
+  errEl.style.display = 'none';
+  if (code.length !== 6) { errEl.textContent = 'Please enter a 6-character code.'; errEl.style.display='block'; return; }
+
+  try {
+    const snap = await getDoc(doc(db, `households/${code}`));
+    if (!snap.exists()) { errEl.textContent = 'Code not found. Please check and try again.'; errEl.style.display='block'; return; }
+    const hh = snap.data();
+    if (hh.ownerUid === uid()) { errEl.textContent = "That's your own household code!"; errEl.style.display='block'; return; }
+
+    const myName = S.profile?.firstName || S.user.email.split('@')[0];
+    // Record membership under owner's profile
+    await setDoc(doc(db, `users/${hh.ownerUid}/household/members/${uid()}`), {
+      uid: uid(), firstName: myName, joinedAt: new Date().toISOString()
+    });
+    // Record in guest's profile
+    await updateDoc(userRef('profile/data'), { householdOwnerUid: hh.ownerUid });
+    S.profile.householdOwnerUid = hh.ownerUid;
+    S.household = hh;
+    subscribeHouseholdData();
+    closeModal('modal-hh-join');
+    renderSettingsPage();
+    // Refresh all shared views
+    renderShoppingList(); renderCalendar(); renderTodayMeals();
+    alert(`You've joined ${hh.ownerName}'s household! You now have access to their shared content.`);
+  } catch(e) {
+    console.error(e);
+    errEl.textContent = 'Something went wrong. Please try again.';
+    errEl.style.display = 'block';
+  }
+};
+
+window.leaveHousehold = async function() {
+  if (!S.household) return;
+  const ownerName = S.household.ownerName || 'this household';
+  if (!confirm(`Leave ${ownerName}'s household? You'll go back to your personal data only.`)) return;
+  // Remove from owner's members
+  await deleteDoc(doc(db, `users/${S.household.ownerUid}/household/members/${uid()}`));
+  // Clear guest link from own profile
+  await updateDoc(userRef('profile/data'), { householdOwnerUid: null });
+  S.profile.householdOwnerUid = null;
+  // Stop hh listeners and clear hh data
+  S.hhUnsubs.forEach(u=>u()); S.hhUnsubs=[];
+  S.household = null;
+  S.hhMeals={}; S.hhPlans={}; S.hhShopItems=[]; S.hhFavMeals=[]; S.hhFavItems=[]; S.hhStores=[]; S.hhShopHistory=[];
+  renderSettingsPage();
+  renderShoppingList(); renderCalendar(); renderTodayMeals(); renderFavPage(); renderFavItemsPage();
+};
+
+window.revokeMember = async function(memberUid) {
+  if (!confirm('Revoke this person\'s access?')) return;
+  await deleteDoc(doc(db, `users/${uid()}/household/members/${memberUid}`));
+  // Clear their guest link
+  try { await updateDoc(doc(db, `users/${memberUid}/profile/data`), { householdOwnerUid: null }); } catch(e) {}
+  S.householdMembers = S.householdMembers.filter(m => m.id !== memberUid);
+  renderSettingsPage();
+};
+
+// ============================================================
+// HOUSEHOLD-AWARE RENDERING HELPERS
+// ============================================================
+
+function allMeals() {
+  const personal = Object.values(S.meals);
+  const hh = canAccess('meals') ? Object.values(S.hhMeals) : [];
+  return [...personal, ...hh];
+}
+
+function allPlans() {
+  const personal = Object.values(S.plans||{});
+  const hh = canAccess('meals') ? Object.values(S.hhPlans||{}) : [];
+  return [...personal, ...hh];
+}
+
+function allShopItems() {
+  const hh = canAccess('shopping') ? S.hhShopItems : [];
+  return [...S.shopItems, ...hh];
+}
+
+function allFavMeals() {
+  const hh = canAccess('favorites') ? S.hhFavMeals : [];
+  return [...S.favMeals, ...hh.map(f=>({...f,_hhReadOnly:true}))];
+}
+
+function allFavItems() {
+  const hh = canAccess('favorites') ? S.hhFavItems : [];
+  return [...S.favItems, ...hh.map(f=>({...f,_hhReadOnly:true}))];
+}
+
+function allStores() {
+  const hh = canAccess('stores') ? S.hhStores : [];
+  return [...S.stores, ...hh.map(s=>({...s,_hhReadOnly:true}))];
+}
+
+// Determine which collection to write a new shop item to
+function targetShopCol(owner) {
+  // owner: 'personal' or 'household'
+  if (owner === 'household' && canAccess('shopping') && isGuest()) return hhCol('shopItems');
+  return userCol('shopItems');
+}
+
+// ============================================================
+// CART TOTAL — three-line version (household / personal / grand)
+// ============================================================
+function updateCartTotal() {
+  const items = allShopItems();
+  const checked = items.filter(i=>i.checked);
+  const hhTotal = checked.filter(i=>i._owner==='household').reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
+  const persTotal = checked.filter(i=>i._owner!=='household').reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0);
+  const grand = hhTotal + persTotal;
+  const hasHH = S.hhShopItems.length > 0 || (S.household && canAccess('shopping'));
+
+  let totalHTML;
+  if (hasHH && (hhTotal > 0 || persTotal > 0)) {
+    totalHTML = `<div style="font-size:0.7rem;opacity:0.7;">🏠 $${hhTotal.toFixed(2)} &nbsp;·&nbsp; 👤 $${persTotal.toFixed(2)}</div>
+      <div class="cart-total-amount">$${grand.toFixed(2)}</div>`;
+  } else {
+    totalHTML = `<div class="cart-total-label">Cart Total</div><div class="cart-total-amount" id="cart-total-display">$${grand.toFixed(2)}</div>`;
+  }
+
+  const bar = document.querySelector('.cart-total-bar');
+  if (bar) {
+    bar.querySelector('div:first-child').innerHTML = totalHTML;
+    const countEl = document.getElementById('cart-items-count');
+    if (countEl) countEl.textContent = `${checked.length} item${checked.length!==1?'s':''} checked`;
+  }
+}
+
+// ============================================================
 // DINNER PLANS
+// ============================================================
+// (existing plan JS below)
+
+
 window.savePlan = async function() {
   const name = document.getElementById('plan-name').value.trim();
   if (!name) return alert('Please enter a plan.');
@@ -1525,7 +1887,7 @@ window.filterIngrPicker = function() {
 
 function renderIngrPickerFavorites(q) {
   const el = document.getElementById('ingr-picker-favorites'); if (!el) return;
-  const items = S.favItems.filter(fi => !q || fi.name.toLowerCase().includes(q));
+  const items = allFavItems().filter(fi => !q || fi.name.toLowerCase().includes(q));
   if (!items.length) { el.innerHTML=`<div class="empty-state" style="padding:1rem;"><div class="empty-sub">${q?'No matches':'No favorite items saved yet'}</div></div>`; return; }
   el.innerHTML = items.map(fi=>`
     <div class="fav-item" onclick="pickIngredient('${fi.name.replace(/'/g,"\\'")}')">
