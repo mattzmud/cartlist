@@ -793,10 +793,19 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="form-group"><label>Item Name *</label><input type="text" id="inv-item-name" placeholder="e.g. Whole Milk"></div>
   <div class="form-group"><label>Category</label><select id="inv-item-category" onchange="onInvCategoryChange()"><option value="">Select category...</option></select></div>
   <div class="form-group"><label>Location</label><select id="inv-item-location-sel"><option value="">Select location...</option></select></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
-    <div class="form-group"><label>Current Qty</label><input type="number" id="inv-item-qty" min="0" step="0.01" value="0"></div>
-    <div class="form-group"><label>Low Stock</label><input type="number" id="inv-item-low" min="0" step="0.01" value="1"></div>
-    <div class="form-group"><label>Restock At</label><input type="number" id="inv-item-restock" min="0" step="0.01" value="2"></div>
+  <div class="form-group"><label>Current Qty</label><input type="number" id="inv-item-qty" min="0" step="0.01" value="0" style="width:140px;"></div>
+  <div class="toggle-row" style="margin-top:0;">
+    <div>
+      <div class="toggle-label">📊 Track stock levels</div>
+      <div class="toggle-sub">Show low stock warnings and restock prompts</div>
+    </div>
+    <div class="toggle" id="inv-track-toggle" onclick="toggleEl(this);toggleInvTrackFields()"><div class="toggle-knob"></div></div>
+  </div>
+  <div id="inv-track-fields" class="hidden" style="background:var(--bg);border-radius:var(--radius-sm);padding:0.875rem;margin-top:0.5rem;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-group"><label>Low Stock Below</label><input type="number" id="inv-item-low" min="0" step="0.01" value="1"></div>
+      <div class="form-group"><label>Restock At or Below</label><input type="number" id="inv-item-restock" min="0" step="0.01" value="2"></div>
+    </div>
   </div>
   <div class="form-group"><label>Usually from Store</label>
     <select id="inv-item-store" onchange="handleInvStoreSelect()"><option value="">No preference</option><option value="__add__">+ Add New Store...</option></select>
@@ -2222,8 +2231,8 @@ function renderInvLocationContent() {
   const loc = S.locations.find(l=>l.id===S.curInvLocationId);
   if (!loc) return;
   const items = (S.invItems[S.curInvLocationId]||[]).sort((a,b)=>a.name.localeCompare(b.name));
-  const restockItems = items.filter(i=>(i.qty||0)<=(i.restock||0));
-  const lowItems = items.filter(i=>(i.qty||0)>(i.restock||0)&&(i.qty||0)<=(i.lowStock||0));
+  const restockItems = items.filter(i=>i.trackStock && i.restock!==null && i.restock!==undefined && (i.qty||0)<=i.restock);
+  const lowItems = items.filter(i=>i.trackStock && i.lowStock!==null && i.lowStock!==undefined && (i.qty||0)>=(i.restock??-Infinity) && (i.qty||0)<=i.lowStock && !restockItems.includes(i));
 
   el.innerHTML = `
     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
@@ -2240,16 +2249,18 @@ function renderInvLocationContent() {
 }
 
 function stockClass(item) {
+  if (!item.trackStock) return '';
   const qty = item.qty||0;
-  if (qty <= (item.restock||0)) return 'restock';
-  if (qty <= (item.lowStock||0)) return 'low-stock';
+  if (item.restock !== null && item.restock !== undefined && qty <= item.restock) return 'restock';
+  if (item.lowStock !== null && item.lowStock !== undefined && qty <= item.lowStock) return 'low-stock';
   return '';
 }
 
 function stockDotClass(item) {
+  if (!item.trackStock) return 'stock-ok';
   const qty = item.qty||0;
-  if (qty <= (item.restock||0)) return 'stock-restock';
-  if (qty <= (item.lowStock||0)) return 'stock-low';
+  if (item.restock !== null && item.restock !== undefined && qty <= item.restock) return 'stock-restock';
+  if (item.lowStock !== null && item.lowStock !== undefined && qty <= item.lowStock) return 'stock-low';
   return 'stock-ok';
 }
 
@@ -2261,7 +2272,7 @@ function renderInvItemRow(item) {
     <div class="stock-dot ${dot}"></div>
     <div class="inv-item-info">
       <div class="inv-item-name">${item.name}</div>
-      <div class="inv-item-meta">${item.category||''}${storeName?' · '+storeName:''}${sc==='restock'?' · <span style="color:#EF4444;font-weight:700;">Needs Restock</span>':sc==='low-stock'?' · <span style="color:#F59E0B;font-weight:700;">Low Stock</span>':''}</div>
+      <div class="inv-item-meta">${item.category||''}${storeName?' · '+storeName:''}${!item.trackStock?'<span style="color:var(--text-muted);font-style:italic;"> · Not tracked</span>':sc==='restock'?' · <span style="color:#EF4444;font-weight:700;">Needs Restock</span>':sc==='low-stock'?' · <span style="color:#F59E0B;font-weight:700;">Low Stock</span>':''}</div>
     </div>
     <div class="inv-qty-badge">
       <div class="inv-qty-num">${item.qty||0}</div>
@@ -2284,6 +2295,12 @@ window.openAddInvItem = function() {
   document.getElementById('inv-item-low').value = '1';
   document.getElementById('inv-item-restock').value = '2';
   document.getElementById('inv-item-store').value = '';
+  document.getElementById('inv-item-price').value = '';
+  document.getElementById('inv-item-notes').value = '';
+  // Reset track toggle to off
+  document.getElementById('inv-track-toggle').classList.remove('on');
+  document.getElementById('inv-track-fields').classList.add('hidden');
+  document.getElementById('inv-item-shop-toggle')?.classList.remove('on');
   // Pre-select current location
   openModal('modal-inv-item');
   setTimeout(()=>{ document.getElementById('inv-item-location-sel').value = S.curInvLocationId||''; },50);
@@ -2296,8 +2313,16 @@ window.openEditInvItem = function(id) {
   document.getElementById('inv-item-id').value = id;
   document.getElementById('inv-item-name').value = item.name||'';
   document.getElementById('inv-item-qty').value = item.qty||0;
-  document.getElementById('inv-item-low').value = item.lowStock||1;
-  document.getElementById('inv-item-restock').value = item.restock||2;
+  document.getElementById('inv-item-low').value = item.lowStock??1;
+  document.getElementById('inv-item-restock').value = item.restock??2;
+  document.getElementById('inv-item-price').value = item.price||'';
+  document.getElementById('inv-item-notes').value = item.notes||'';
+  // Restore track toggle
+  const tracked = item.trackStock !== false && item.trackStock !== undefined ? item.trackStock : false;
+  const toggle = document.getElementById('inv-track-toggle');
+  toggle.classList.toggle('on', !!tracked);
+  document.getElementById('inv-track-fields').classList.toggle('hidden', !tracked);
+  document.getElementById('inv-item-shop-toggle')?.classList.remove('on');
   openModal('modal-inv-item');
   setTimeout(()=>{
     document.getElementById('inv-item-category').value = item.category||'';
@@ -2311,8 +2336,9 @@ window.saveInvItem = async function() {
   const category = document.getElementById('inv-item-category').value;
   const locationId = document.getElementById('inv-item-location-sel').value; if(!locationId) return alert('Please select a location.');
   const qty = parseFloat(document.getElementById('inv-item-qty').value)||0;
-  const lowStock = parseFloat(document.getElementById('inv-item-low').value)||1;
-  const restock = parseFloat(document.getElementById('inv-item-restock').value)||2;
+  const trackStock = document.getElementById('inv-track-toggle').classList.contains('on');
+  const lowStock = trackStock ? (parseFloat(document.getElementById('inv-item-low').value)||1) : null;
+  const restock = trackStock ? (parseFloat(document.getElementById('inv-item-restock').value)||2) : null;
   const storeSelVal = document.getElementById('inv-item-store').value;
   const storeId = storeSelVal === '__add__' ? '' : storeSelVal;
   const price = parseFloat(document.getElementById('inv-item-price').value)||0;
@@ -2324,7 +2350,7 @@ window.saveInvItem = async function() {
   const pf = document.getElementById('inv-item-photo')?.files[0];
   if(pf) { try { const sr=ref(storage,`users/${uid()}/items/${Date.now()}_${pf.name}`); const sn=await uploadBytes(sr,pf); photoUrl=await getDownloadURL(sn.ref); } catch(e){} }
 
-  const data = {name,category,locationId,qty,lowStock,restock,storeId,price,notes,photoUrl,updatedAt:serverTimestamp()};
+  const data = {name,category,locationId,qty,trackStock,lowStock,restock,storeId,price,notes,photoUrl,updatedAt:serverTimestamp()};
   if(editId) { await updateDoc(doc(db,`users/${uid()}/invItems/${editId}`), data); }
   else { await addDoc(userCol('invItems'), {...data,createdAt:serverTimestamp()}); }
 
@@ -3116,6 +3142,11 @@ window.setMealList = function(target, btn) {
   document.querySelectorAll('#meal-list-selector-row .view-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('meal-list-selector')?.setAttribute('data-target', target);
+};
+
+window.toggleInvTrackFields = function() {
+  const on = document.getElementById('inv-track-toggle').classList.contains('on');
+  document.getElementById('inv-track-fields').classList.toggle('hidden', !on);
 };
 
 console.log('cartlist ✓');
