@@ -513,6 +513,13 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <div class="form-group"><label>Restock At</label><input type="number" id="item-inv-restock" min="0" step="0.01" value="2"></div>
     </div>
   </div>
+  <div id="item-list-selector" class="hidden" style="margin-top:0.75rem;">
+    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Add to which list?</div>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="view-tab active" id="item-list-personal" onclick="setItemList('personal',this)" style="flex:1;padding:0.6rem;">👤 My List</button>
+      <button class="view-tab" id="item-list-household" onclick="setItemList('household',this)" style="flex:1;padding:0.6rem;">🏠 Household</button>
+    </div>
+  </div>
   <button class="btn btn-primary mt-md" onclick="saveItem()">Add to Shopping List</button>
 </div></div>
 
@@ -856,6 +863,37 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div id="uncategorized-content"></div>
 </div></div>
 
+<!-- EDIT MEMBER PERMISSIONS MODAL -->
+<div class="modal-overlay" id="modal-member-perms"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span id="member-perms-title">Edit Permissions</span><button class="modal-close" onclick="closeModal('modal-member-perms')">✕</button></div>
+  <input type="hidden" id="member-perms-uid">
+  <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Choose what this member can access in your household.</p>
+  <div style="display:flex;flex-direction:column;gap:0.5rem;" id="member-perms-fields">
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+      <div><div style="font-weight:700;font-size:0.9rem;">🛒 Shopping List</div><div style="font-size:0.75rem;color:var(--text-muted);">View, add, check off items + history</div></div>
+      <input type="checkbox" id="mp-shopping" style="width:18px;height:18px;">
+    </label>
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+      <div><div style="font-weight:700;font-size:0.9rem;">📅 Meal Calendar</div><div style="font-size:0.75rem;color:var(--text-muted);">View and add meals &amp; dinner plans</div></div>
+      <input type="checkbox" id="mp-meals" style="width:18px;height:18px;">
+    </label>
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+      <div><div style="font-weight:700;font-size:0.9rem;">⭐ Favorites</div><div style="font-size:0.75rem;color:var(--text-muted);">View and use saved meals</div></div>
+      <input type="checkbox" id="mp-favorites" style="width:18px;height:18px;">
+    </label>
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;">
+      <div><div style="font-weight:700;font-size:0.9rem;">🏪 Stores</div><div style="font-size:0.75rem;color:var(--text-muted);">View and use your saved stores</div></div>
+      <input type="checkbox" id="mp-stores" style="width:18px;height:18px;">
+    </label>
+    <div id="mp-inv-locations"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1rem;">
+    <button class="btn btn-outline" onclick="closeModal('modal-member-perms')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveMemberPerms()">Save</button>
+  </div>
+</div></div>
+
 <!-- CHANGE PASSWORD MODAL -->
 <div class="modal-overlay" id="modal-change-password"><div class="modal">
   <div class="modal-handle"></div>
@@ -902,6 +940,7 @@ const S = {
   meals: {}, plans: {}, shopItems: [], favMeals: [], favItems: [], stores: [], shopHistory: [],
   // Household
   household: null,         // { ownerUid, code, permissions:{meals,shopping,favorites,stores} } — set if user is a GUEST
+  householdPermissions: null, // owner's view: the baseline permissions set at code generation
   householdMembers: [],    // [ { uid, firstName, joinedAt } ] — set if user is OWNER
   hhMeals: {}, hhPlans: {}, hhShopItems: [], hhFavMeals: [], hhFavItems: [], hhStores: [], hhShopHistory: [],
   // Inventory
@@ -927,6 +966,8 @@ function userCol(p) { return collection(db, `users/${uid()}/${p}`); }
 function ownerUid() { return S.household?.ownerUid || uid(); }
 function hhRef(p) { return doc(db, `users/${ownerUid()}/${p}`); }
 function hhCol(p) { return collection(db, `users/${ownerUid()}/${p}`); }
+// For owner adding TO their household list specifically (same as userCol when owner)
+function myHhCol(p) { return collection(db, `users/${uid()}/${p}`); }
 function canAccess(perm) { if (!S.household) return true; return !!S.household.permissions?.[perm]; }
 function isGuest() { return !!S.household; }
 function isOwner() { return !S.household; }
@@ -960,6 +1001,8 @@ window.doLogin = async function() {
   if (!email||!pw) { err.textContent='Please enter email and password.'; err.style.display='block'; return; }
   try {
     document.getElementById('auth-btn').textContent = 'Signing in...';
+    // Clear saved page so fresh sign-in always lands on home
+    try { localStorage.removeItem('cartlist_page'); } catch(e) {}
     await signInWithEmailAndPassword(auth, email, pw);
   } catch(e) {
     err.textContent = 'Invalid email or password.';
@@ -982,6 +1025,7 @@ onAuthStateChanged(auth, async user => {
     initListeners();
     initUI();
     await loadHouseholdData();
+    // Always start at home on fresh sign-in (initUI restores page on refresh)
   } else {
     S.user = null;
     document.getElementById('auth-screen').style.display = 'flex';
@@ -1009,7 +1053,7 @@ function initListeners() {
   S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data(),_owner:'personal'})); renderShoppingList(); updateCartTotal(); }));
   S.unsubs.push(onSnapshot(userCol('favMeals'), s => { S.favMeals=[]; s.forEach(d=>S.favMeals.push({id:d.id,...d.data()})); renderFavPage(); renderModalFavs(); }));
   S.unsubs.push(onSnapshot(userCol('favItems'), s => { S.favItems=[]; s.forEach(d=>S.favItems.push({id:d.id,...d.data()})); renderFavItemsPage(); renderModalFavItems(); }));
-  S.unsubs.push(onSnapshot(userCol('stores'), s => { S.stores=[]; s.forEach(d=>S.stores.push({id:d.id,...d.data()})); renderStores(); populateStoreDropdowns(); }));
+  S.unsubs.push(onSnapshot(userCol('stores'), s => { S.stores=[]; s.forEach(d=>S.stores.push({id:d.id,...d.data()})); renderStores(); populateStoreDropdowns(); renderShoppingList(); }));
   S.unsubs.push(onSnapshot(userCol('shopHistory'), s => { S.shopHistory=[]; s.forEach(d=>S.shopHistory.push({id:d.id,...d.data(),_owner:'personal'})); renderHistCalendar(); renderHistList(); }));
   getDoc(userRef('config/categories')).then(s => { if(s.exists()&&s.data().list) S.categories=s.data().list; populateCatSelects(); });
   // Locations
@@ -1089,6 +1133,8 @@ async function loadHouseholdData() {
       const mSnap = await getDocs(collection(db, `households/${S.householdCode}/members`));
       S.householdMembers = [];
       mSnap.forEach(d => S.householdMembers.push({id:d.id,...d.data()}));
+      // Store the household-wide permissions as fallback
+      if (hhConfigSnap.exists()) S.householdPermissions = hhConfigSnap.data().permissions;
     }
     renderSettingsPage();
   }
@@ -1112,7 +1158,7 @@ function subscribeHouseholdData() {
     S.hhUnsubs.push(onSnapshot(hhCol('favItems'), s => { S.hhFavItems=[]; s.forEach(d=>S.hhFavItems.push({id:d.id,...d.data(),_owner:'household'})); renderFavItemsPage(); renderModalFavItems(); }));
   }
   if (p.stores) {
-    S.hhUnsubs.push(onSnapshot(hhCol('stores'), s => { S.hhStores=[]; s.forEach(d=>S.hhStores.push({id:d.id,...d.data(),_owner:'household'})); renderStores(); populateStoreDropdowns(); }));
+    S.hhUnsubs.push(onSnapshot(hhCol('stores'), s => { S.hhStores=[]; s.forEach(d=>S.hhStores.push({id:d.id,...d.data(),_owner:'household'})); renderStores(); populateStoreDropdowns(); renderShoppingList(); }));
   }
 }
 
@@ -1153,7 +1199,20 @@ window.showPage = function(page) {
 // MODALS
 window.openModal = function(id) {
   document.getElementById(id)?.classList.add('open');
-  if(id==='modal-add-item') { populateCatSelects(); populateStoreDropdowns(); populateItemInvLocations(); }
+  if(id==='modal-add-item') {
+    populateCatSelects(); populateStoreDropdowns(); populateItemInvLocations();
+    // Show household list selector only if user has a household with shopping access
+    const showSelector = (isGuest() && canAccess('shopping')) || (!isGuest() && S.hhShopItems.length >= 0 && S.household === null && S.householdCode);
+    const inHousehold = isGuest() ? canAccess('shopping') : !!S.householdCode;
+    const sel = document.getElementById('item-list-selector');
+    if (sel) sel.classList.toggle('hidden', !inHousehold);
+    // Default to personal
+    const pBtn = document.getElementById('item-list-personal');
+    const hBtn = document.getElementById('item-list-household');
+    if (pBtn) pBtn.classList.add('active');
+    if (hBtn) hBtn.classList.remove('active');
+    document.getElementById('item-list-selector')?.setAttribute('data-target', 'personal');
+  }
   if(id==='modal-add-store') { populateStoreCatSelect(); }
   if(id==='modal-favorites') renderModalFavs();
   if(id==='modal-hh-share') renderInvPermToggles();
@@ -1355,10 +1414,22 @@ window.saveItem = async function() {
   const pf = document.getElementById('item-photo').files[0];
   if(pf) { try { const sr=ref(storage,`users/${uid()}/items/${Date.now()}_${pf.name}`); const sn=await uploadBytes(sr,pf); photoUrl=await getDownloadURL(sn.ref); } catch(e){} }
 
-  // Always add to shopping list
+  // Determine target list: personal or household
+  const listTarget = document.getElementById('item-list-selector')?.getAttribute('data-target') || 'personal';
   const data = {name,category,store,qty,price,notes,photoUrl,source:'manual',checked:false,createdAt:serverTimestamp()};
-  if(editId) { await updateDoc(doc(db,`users/${uid()}/shopItems/${editId}`), {name,category,store,qty,price,notes}); }
-  else { await addDoc(userCol('shopItems'), data); }
+  if(editId) {
+    const editItem = allShopItems().find(i=>i.id===editId);
+    const editPath = editItem?._owner==='household' ? `users/${ownerUid()}/shopItems/${editId}` : `users/${uid()}/shopItems/${editId}`;
+    await updateDoc(doc(db,editPath), {name,category,store,qty,price,notes});
+  } else if(listTarget === 'household' && S.householdCode) {
+    // Owner adding to household list
+    await addDoc(myHhCol('shopItems'), {...data, _owner:'household'});
+  } else if(isGuest() && listTarget === 'household' && canAccess('shopping')) {
+    // Guest adding to owner's household list
+    await addDoc(hhCol('shopItems'), data);
+  } else {
+    await addDoc(userCol('shopItems'), data);
+  }
 
   // Optionally add to inventory
   if(addToInv) {
@@ -2522,12 +2593,34 @@ function renderSettingsPage() {
   } else {
     // USER IS AN OWNER (or solo)
     const members = S.householdMembers || [];
-    const memberHTML = members.length ? members.map(m => `
-      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:0.4rem;">
-        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:0.9rem;">${(m.firstName||'?')[0].toUpperCase()}</div>
-        <div style="flex:1;"><div style="font-weight:700;font-size:0.9rem;">${m.firstName||'Member'}</div><div style="font-size:0.7rem;color:var(--text-muted);">Joined ${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : '—'}</div></div>
-        <button onclick="revokeMember('${m.id}')" class="btn btn-danger btn-sm">Revoke</button>
-      </div>`).join('') : `<div style="font-size:0.85rem;color:var(--text-muted);padding:0.5rem 0.25rem;">No members yet.</div>`;
+    const memberHTML = members.length ? members.map(m => {
+      // Build a readable permissions summary
+      const perms = m.permissions || S.householdPermissions || {};
+      const permLabels = [
+        perms.shopping && 'Shopping',
+        perms.meals && 'Meals',
+        perms.favorites && 'Favorites',
+        perms.stores && 'Stores',
+        ...Object.entries(perms.inventory||{}).filter(([,v])=>v).map(([k])=>{
+          const loc=S.locations.find(l=>l.id===k); return loc?loc.name:null;
+        }).filter(Boolean)
+      ].filter(Boolean);
+      const permSummary = permLabels.length ? permLabels.join(', ') : 'No access';
+      return `<div style="background:var(--bg);border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-bottom:0.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:0.9rem;">${(m.firstName||'?')[0].toUpperCase()}</div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:0.9rem;">${m.firstName||'Member'}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);">Joined ${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : '—'}</div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem;">Access: <strong style="color:var(--text);">${permSummary}</strong></div>
+        <div style="display:flex;gap:0.5rem;">
+          <button onclick="openMemberPerms('${m.id}')" class="btn btn-outline btn-sm" style="flex:1;">✏️ Edit Access</button>
+          <button onclick="revokeMember('${m.id}')" class="btn btn-danger btn-sm">Revoke</button>
+        </div>
+      </div>`;
+    }).join('') : `<div style="font-size:0.85rem;color:var(--text-muted);padding:0.5rem 0.25rem;">No members yet.</div>`;
 
     el.innerHTML = `
       <div class="settings-section">
@@ -2933,6 +3026,66 @@ function formatTime(t) {
 function planTypeLabel(t) {
   return {breakfast:'Breakfast',brunch:'Brunch',lunch:'Lunch',dinner:'Dinner',other:'Other'}[t] || '';
 }
+
+// Member permissions management
+window.openMemberPerms = function(memberUid) {
+  const m = S.householdMembers.find(x=>x.id===memberUid);
+  if (!m) return;
+  document.getElementById('member-perms-title').textContent = `Edit Access — ${m.firstName||'Member'}`;
+  document.getElementById('member-perms-uid').value = memberUid;
+
+  // Use member's own stored permissions, or fall back to household-wide permissions
+  const perms = m.permissions || S.householdPermissions || {};
+  document.getElementById('mp-shopping').checked = !!perms.shopping;
+  document.getElementById('mp-meals').checked = !!perms.meals;
+  document.getElementById('mp-favorites').checked = !!perms.favorites;
+  document.getElementById('mp-stores').checked = !!perms.stores;
+
+  // Per-location inventory toggles
+  const invPerms = perms.inventory || {};
+  document.getElementById('mp-inv-locations').innerHTML = S.locations.map(l=>`
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;margin-top:0.25rem;">
+      <div><div style="font-weight:700;font-size:0.9rem;">📦 ${l.name}</div></div>
+      <input type="checkbox" id="mp-loc-${l.id}" ${invPerms[l.id]?'checked':''} style="width:18px;height:18px;">
+    </label>`).join('');
+
+  openModal('modal-member-perms');
+};
+
+window.saveMemberPerms = async function() {
+  const memberUid = document.getElementById('member-perms-uid').value;
+  if (!memberUid || !S.householdCode) return;
+
+  const invPerms = {};
+  S.locations.forEach(l => {
+    const cb = document.getElementById('mp-loc-'+l.id);
+    invPerms[l.id] = cb ? cb.checked : false;
+  });
+
+  const permissions = {
+    shopping: document.getElementById('mp-shopping').checked,
+    meals: document.getElementById('mp-meals').checked,
+    favorites: document.getElementById('mp-favorites').checked,
+    stores: document.getElementById('mp-stores').checked,
+    inventory: invPerms,
+  };
+
+  // Save per-member permissions to /households/{code}/members/{uid}
+  await updateDoc(doc(db, `households/${S.householdCode}/members/${memberUid}`), { permissions });
+
+  // Update local state
+  const m = S.householdMembers.find(x=>x.id===memberUid);
+  if (m) m.permissions = permissions;
+
+  closeModal('modal-member-perms');
+  renderSettingsPage();
+};
+
+window.setItemList = function(target, btn) {
+  document.querySelectorAll('#item-list-selector .view-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('item-list-selector')?.setAttribute('data-target', target);
+};
 
 console.log('cartlist ✓');
 </script>
