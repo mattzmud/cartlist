@@ -823,6 +823,52 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <button class="btn btn-primary mt-md" onclick="saveInvItem()">Save Item</button>
 </div></div>
 
+<!-- BULK ADD INVENTORY MODAL -->
+<div class="modal-overlay" id="modal-bulk-add" style="align-items:flex-start;padding-top:2rem;">
+  <div class="modal" style="max-width:98vw;width:98vw;border-radius:var(--radius-lg);max-height:90vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span id="bulk-add-title">Add Items in Bulk</span>
+      <button class="modal-close" onclick="closeModal('modal-bulk-add')">✕</button>
+    </div>
+    <div style="background:#E8F5E9;border-radius:var(--radius-sm);padding:0.75rem 1rem;font-size:0.8rem;color:var(--green-dark);margin-bottom:1rem;line-height:1.5;">
+      💡 Fill in each row to add an item. When you <strong>Tab</strong> past the last field in a row, a new row appears automatically. Rows with no name will be skipped on save.
+    </div>
+    <!-- Add to list selector (shown when in household) -->
+    <div id="bulk-list-selector-row" class="hidden" style="margin-bottom:1rem;">
+      <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Save to location</div>
+      <div class="view-tabs" style="max-width:280px;">
+        <button class="view-tab active" id="bulk-list-personal" onclick="setBulkList('personal',this)">👤 Personal</button>
+        <button class="view-tab" id="bulk-list-household" onclick="setBulkList('household',this)">🏠 Household</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:1rem;">
+      <table id="bulk-table" style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead>
+          <tr style="background:var(--bg);">
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;min-width:160px;">Item Name *</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:140px;">Category</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:80px;">Qty</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:60px;">Track</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:80px;">Low Stock</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:80px;">Restock At</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:140px;">Store</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:80px;">Unit Price</th>
+            <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:160px;">Notes</th>
+            <th style="width:32px;"></th>
+          </tr>
+        </thead>
+        <tbody id="bulk-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+      <button class="btn btn-primary" onclick="saveBulkItems()" style="flex:1;">Save All Items</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-bulk-add')" style="width:auto;">Cancel</button>
+    </div>
+    <div id="bulk-save-result" style="margin-top:0.75rem;font-size:0.85rem;display:none;"></div>
+  </div>
+</div>
+
 <!-- TAKE INVENTORY MODAL -->
 <div class="modal-overlay" id="modal-take-inventory"><div class="modal">
   <div class="modal-handle"></div>
@@ -1870,9 +1916,10 @@ async function updateInventoryFromShop(purchasedItems) {
   for (const purchased of purchasedItems) {
     const match = allInvFlat.find(inv => inv.name.toLowerCase() === (purchased.name||'').toLowerCase());
     if (match) {
-      // Exact match — increment qty
-      const newQty = (match.qty||0) + (parseInt(purchased.qty)||1);
-      await updateDoc(doc(db,`users/${uid()}/invItems/${match.id}`), {qty:newQty, updatedAt:serverTimestamp()});
+      // Exact match — increment qty, update price if provided
+      const newQty = (match.qty||0) + (parseFloat(purchased.qty)||1);
+      const priceUpdate = purchased.price ? {price: parseFloat(purchased.price)} : {};
+      await updateDoc(doc(db,`users/${uid()}/invItems/${match.id}`), {qty:newQty, ...priceUpdate, updatedAt:serverTimestamp()});
     } else {
       // No match — need to find location from category or prompt
       const cat = purchased.category||'';
@@ -1881,8 +1928,13 @@ async function updateInventoryFromShop(purchasedItems) {
         // Auto-add to correct location
         await addDoc(userCol('invItems'), {
           name:purchased.name, category:cat, locationId:loc.id,
-          qty:parseInt(purchased.qty)||1, lowStock:1, restock:2,
-          storeId:purchased.store||'', createdAt:serverTimestamp(), updatedAt:serverTimestamp()
+          qty:parseFloat(purchased.qty)||1,
+          price:parseFloat(purchased.price)||0,
+          notes:purchased.notes||'',
+          trackStock:false, lowStock:null, restock:null,
+          storeId:purchased.store||'',
+          photoUrl:'',
+          createdAt:serverTimestamp(), updatedAt:serverTimestamp()
         });
       } else {
         uncategorized.push(purchased);
@@ -1928,7 +1980,11 @@ function showUncategorizedPrompt(items) {
   window.saveUncategorized = async function(name, qty, storeId) {
     const cat = document.getElementById('unc-cat').value;
     const locId = document.getElementById('unc-loc').value;
-    await addDoc(userCol('invItems'), {name,category:cat,locationId:locId,qty,lowStock:1,restock:2,storeId,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    await addDoc(userCol('invItems'), {name,category:cat,locationId:locId,qty,
+      price:parseFloat(item.price)||0, notes:item.notes||'',
+      trackStock:false, lowStock:null, restock:null,
+      storeId, photoUrl:'',
+      createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     idx++;
     if (idx < items.length) promptNext(); else closeModal('modal-uncategorized');
   };
@@ -2241,7 +2297,10 @@ function renderInvLocationContent() {
       <button class="btn btn-outline btn-sm" onclick="openRestockModal()">🛒 Manage Restock</button>
       <button class="btn btn-outline btn-sm" onclick="openMergeModal()">🔀 Merge Items</button>
     </div>
-    <button class="btn btn-primary btn-sm" style="margin-bottom:0.75rem;" onclick="openAddInvItem()">+ Add Item</button>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+      <button class="btn btn-primary btn-sm" onclick="openAddInvItem()">+ Add Item</button>
+      <button class="btn btn-outline btn-sm" onclick="openBulkAdd()">📋 Add in Bulk</button>
+    </div>
     ${!items.length ? '<div class="empty-state"><span class="empty-icon">📦</span><div class="empty-title">No items in '+loc.name+'</div><div class="empty-sub">Add items to track your inventory.</div></div>' :
       items.map(item => renderInvItemRow(item)).join('')
     }
@@ -3147,6 +3206,207 @@ window.setMealList = function(target, btn) {
 window.toggleInvTrackFields = function() {
   const on = document.getElementById('inv-track-toggle').classList.contains('on');
   document.getElementById('inv-track-fields').classList.toggle('hidden', !on);
+};
+
+// ============================================================
+// BULK ADD INVENTORY
+// ============================================================
+let _bulkListTarget = 'personal';
+
+window.setBulkList = function(target, btn) {
+  _bulkListTarget = target;
+  document.querySelectorAll('#bulk-list-selector-row .view-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+};
+
+window.openBulkAdd = function() {
+  const loc = S.locations.find(l=>l.id===S.curInvLocationId);
+  if (!loc) return;
+  document.getElementById('bulk-add-title').textContent = `Add Items in Bulk — ${loc.name}`;
+
+  // Show household selector if relevant
+  const selRow = document.getElementById('bulk-list-selector-row');
+  if (selRow) selRow.classList.toggle('hidden', !inHousehold());
+  _bulkListTarget = 'personal';
+  document.getElementById('bulk-list-personal')?.classList.add('active');
+  document.getElementById('bulk-list-household')?.classList.remove('active');
+
+  // Clear result banner
+  const res = document.getElementById('bulk-save-result');
+  if (res) { res.style.display='none'; res.innerHTML=''; }
+
+  // Build tbody with one starter row
+  const tbody = document.getElementById('bulk-tbody');
+  tbody.innerHTML = '';
+  addBulkRow(tbody);
+
+  openModal('modal-bulk-add');
+  // Focus first input
+  setTimeout(()=>{ tbody.querySelector('input[data-field="name"]')?.focus(); }, 100);
+};
+
+function buildCatOptions() {
+  return '<option value="">—</option>' + S.categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+function buildStoreOptions() {
+  return '<option value="">—</option>' + allStores().map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+function addBulkRow(tbody, focusFirst=false) {
+  const rowIdx = tbody.rows.length;
+  const tr = document.createElement('tr');
+  tr.dataset.row = rowIdx;
+  tr.style.cssText = 'border-bottom:1px solid var(--border);';
+
+  const cellStyle = 'padding:0.3rem 0.4rem;vertical-align:top;';
+  const inputStyle = 'width:100%;padding:0.4rem 0.5rem;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;background:var(--bg);outline:none;';
+  const selectStyle = inputStyle;
+
+  tr.innerHTML = `
+    <td style="${cellStyle}">
+      <input type="text" data-field="name" placeholder="Item name" style="${inputStyle}" data-row="${rowIdx}">
+      <div class="bulk-row-error" style="color:#DC2626;font-size:0.7rem;margin-top:2px;display:none;"></div>
+    </td>
+    <td style="${cellStyle}"><select data-field="category" style="${selectStyle}" data-row="${rowIdx}">${buildCatOptions()}</select></td>
+    <td style="${cellStyle}"><input type="number" data-field="qty" value="0" min="0" step="0.01" style="${inputStyle}width:70px;" data-row="${rowIdx}"></td>
+    <td style="${cellStyle};text-align:center;padding-top:0.6rem;"><input type="checkbox" data-field="track" title="Track stock levels" data-row="${rowIdx}" onchange="toggleBulkTrack(this)"></td>
+    <td style="${cellStyle}"><input type="number" data-field="low" value="" min="0" step="0.01" placeholder="—" style="${inputStyle}width:70px;opacity:0.4;" disabled data-row="${rowIdx}"></td>
+    <td style="${cellStyle}"><input type="number" data-field="restock" value="" min="0" step="0.01" placeholder="—" style="${inputStyle}width:70px;opacity:0.4;" disabled data-row="${rowIdx}"></td>
+    <td style="${cellStyle}"><select data-field="store" style="${selectStyle}" data-row="${rowIdx}">${buildStoreOptions()}</select></td>
+    <td style="${cellStyle}"><input type="number" data-field="price" value="" min="0" step="0.01" placeholder="0.00" style="${inputStyle}width:80px;" data-row="${rowIdx}"></td>
+    <td style="${cellStyle}"><input type="text" data-field="notes" placeholder="Optional" style="${inputStyle}" data-row="${rowIdx}"></td>
+    <td style="${cellStyle};padding-top:0.5rem;"><button onclick="removeBulkRow(this)" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;" title="Remove row">✕</button></td>
+  `;
+
+  tbody.appendChild(tr);
+
+  // Wire up Tab on the last input (notes) to add new row
+  const notesInput = tr.querySelector('[data-field="notes"]');
+  notesInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault();
+      const newTr = addBulkRow(tbody, true);
+    }
+  });
+
+  // Focus-in highlight
+  tr.querySelectorAll('input,select').forEach(el => {
+    el.addEventListener('focus', ()=>{ tr.style.background='#F0FDF4'; });
+    el.addEventListener('blur', ()=>{ tr.style.background=''; });
+    // Clear error on input
+    if (el.dataset.field === 'name') {
+      el.addEventListener('input', ()=>{
+        const errEl = tr.querySelector('.bulk-row-error');
+        if (errEl) errEl.style.display='none';
+        el.style.borderColor = '';
+      });
+    }
+  });
+
+  if (focusFirst) {
+    setTimeout(()=>{ tr.querySelector('[data-field="name"]')?.focus(); }, 50);
+  }
+  return tr;
+}
+
+window.toggleBulkTrack = function(cb) {
+  const row = cb.closest('tr');
+  const lowInput = row.querySelector('[data-field="low"]');
+  const restockInput = row.querySelector('[data-field="restock"]');
+  const tracked = cb.checked;
+  [lowInput, restockInput].forEach(inp => {
+    inp.disabled = !tracked;
+    inp.style.opacity = tracked ? '1' : '0.4';
+    if (tracked && !inp.value) inp.value = inp.dataset.field==='low' ? '1' : '2';
+  });
+};
+
+window.removeBulkRow = function(btn) {
+  const tbody = document.getElementById('bulk-tbody');
+  const row = btn.closest('tr');
+  if (tbody.rows.length > 1) {
+    row.remove();
+  } else {
+    // Clear the row instead of removing the last one
+    row.querySelectorAll('input[type="text"],input[type="number"]').forEach(i=>i.value='');
+    row.querySelectorAll('select').forEach(s=>s.value='');
+    row.querySelector('[data-field="track"]').checked=false;
+    toggleBulkTrack(row.querySelector('[data-field="track"]'));
+  }
+};
+
+window.saveBulkItems = async function() {
+  const tbody = document.getElementById('bulk-tbody');
+  const locId = S.curInvLocationId;
+  if (!locId) return;
+  const resultEl = document.getElementById('bulk-save-result');
+  resultEl.style.display='none';
+
+  const rows = [...tbody.rows];
+  let saved = 0, skipped = 0, errors = 0;
+  const saveBtn = document.querySelector('#modal-bulk-add .btn-primary');
+  if (saveBtn) { saveBtn.textContent = 'Saving...'; saveBtn.disabled = true; }
+
+  for (const row of rows) {
+    const name = row.querySelector('[data-field="name"]')?.value.trim();
+    const errEl = row.querySelector('.bulk-row-error');
+
+    // Skip rows with no name
+    if (!name) { skipped++; continue; }
+
+    // Validate
+    if (name.length < 1) {
+      if (errEl) { errEl.textContent='Name required'; errEl.style.display='block'; }
+      row.querySelector('[data-field="name"]').style.borderColor='#EF4444';
+      errors++;
+      continue;
+    }
+
+    const category = row.querySelector('[data-field="category"]')?.value || '';
+    const qty = parseFloat(row.querySelector('[data-field="qty"]')?.value)||0;
+    const trackStock = row.querySelector('[data-field="track"]')?.checked || false;
+    const lowStock = trackStock ? (parseFloat(row.querySelector('[data-field="low"]')?.value)||1) : null;
+    const restock = trackStock ? (parseFloat(row.querySelector('[data-field="restock"]')?.value)||2) : null;
+    const storeId = row.querySelector('[data-field="store"]')?.value || '';
+    const price = parseFloat(row.querySelector('[data-field="price"]')?.value)||0;
+    const notes = row.querySelector('[data-field="notes"]')?.value.trim()||'';
+
+    // Auto-fill location from category if not already set
+    let finalLocId = locId;
+    if (!finalLocId && category) {
+      const autoLoc = S.locations.find(l=>(l.categories||[]).includes(category));
+      if (autoLoc) finalLocId = autoLoc.id;
+    }
+
+    const data = {name,category,locationId:finalLocId,qty,trackStock,lowStock,restock,storeId,price,notes,photoUrl:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+
+    try {
+      await addDoc(userCol('invItems'), data);
+      // Mark row as saved
+      row.style.background='#F0FDF4';
+      row.querySelector('[data-field="name"]').style.borderColor='var(--green)';
+      if (errEl) errEl.style.display='none';
+      saved++;
+    } catch(e) {
+      console.error('Bulk save error:', e);
+      if (errEl) { errEl.textContent='Save failed'; errEl.style.display='block'; }
+      errors++;
+    }
+  }
+
+  if (saveBtn) { saveBtn.textContent='Save All Items'; saveBtn.disabled=false; }
+
+  resultEl.style.display='block';
+  if (errors === 0) {
+    resultEl.style.color='var(--green-dark)';
+    resultEl.innerHTML=`✅ Saved ${saved} item${saved!==1?'s':''}${skipped?' · '+skipped+' blank row'+(skipped!==1?'s':'')+' skipped':''}.`;
+    // Auto-close after 1.5s if all good
+    setTimeout(()=>{ closeModal('modal-bulk-add'); }, 1800);
+  } else {
+    resultEl.style.color='#DC2626';
+    resultEl.innerHTML=`⚠️ Saved ${saved}, ${errors} error${errors!==1?'s':''} — check highlighted rows.`;
+  }
 };
 
 console.log('cartlist ✓');
