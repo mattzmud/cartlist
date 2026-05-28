@@ -230,11 +230,11 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 }
 .hamburger-btn { display: inline-flex; }
-.hamburger-menu { display: flex; position: fixed; top: 0; right: 0; bottom: 0; width: 260px; background: var(--card); box-shadow: -4px 0 24px rgba(26,26,46,0.15); z-index: 300; padding: 1.5rem 1rem; flex-direction: column; gap: 0.25rem; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; }
+.hamburger-menu { display: flex; position: fixed; top: 0; right: 0; width: 260px; max-height: 100vh; background: var(--card); box-shadow: -4px 0 24px rgba(26,26,46,0.15); z-index: 300; padding: 1.5rem 1rem; flex-direction: column; gap: 0.25rem; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; align-items: flex-start; }
 .hamburger-menu.open { transform: translateX(0); }
 .hamburger-overlay { display: none; position: fixed; inset: 0; background: rgba(26,26,46,0.4); z-index: 299; }
 .hamburger-overlay.open { display: block; }
-.hamburger-menu .nav-item { flex-direction: row; justify-content: flex-start; padding: 0.75rem 1rem; border-radius: var(--radius-sm); font-size: 0.95rem; gap: 0.875rem; text-transform: none; letter-spacing: 0; width: 100%; }
+.hamburger-menu .nav-item { flex-direction: row; justify-content: flex-start; padding: 0.75rem 1rem; border-radius: var(--radius-sm); font-size: 0.95rem; gap: 0.875rem; text-transform: none; letter-spacing: 0; width: 100%; flex-shrink: 0; align-self: stretch; }
 .hamburger-menu .nav-item .nav-icon { font-size: 1.3rem; }
 .hamburger-menu .nav-item.active { background: #E8F5E9; color: var(--green); }
 .hamburger-menu-title { font-family: 'Nunito', sans-serif; font-size: 1.25rem; font-weight: 900; color: var(--green); margin-bottom: 1rem; padding: 0.25rem 1rem; }
@@ -560,7 +560,21 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="modal-title"><span id="add-plan-modal-title">Add Dinner Plans</span><button class="modal-close" onclick="closeModal('modal-add-plan')">✕</button></div>
   <input type="hidden" id="edit-plan-id">
   <div class="form-group"><label>What's the plan? *</label><input type="text" id="plan-name" placeholder="e.g. Eating Out, Chipotle, Dinner at Grandma's"></div>
-  <div class="form-group"><label>Date</label><input type="date" id="plan-date"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+    <div class="form-group"><label>Date *</label><input type="date" id="plan-date"></div>
+    <div class="form-group"><label>Time <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label><input type="time" id="plan-time"></div>
+  </div>
+  <div class="form-group"><label>Meal Type</label>
+    <select id="plan-type">
+      <option value="">No preference</option>
+      <option value="breakfast">Breakfast</option>
+      <option value="brunch">Brunch</option>
+      <option value="lunch">Lunch</option>
+      <option value="dinner">Dinner</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div class="form-group"><label>Location <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label><input type="text" id="plan-location" placeholder="e.g. Chipotle, 123 Main St..."></div>
   <div class="form-group"><label>Notes</label><textarea class="note-area" id="plan-notes" placeholder="Any details..."></textarea></div>
   <button class="btn btn-primary mt-md" onclick="savePlan()" style="background:var(--orange);">Save Plan</button>
 </div></div>
@@ -1104,6 +1118,11 @@ function initUI() {
   renderCalendar(); renderHistCalendar();
   populateCatSelects(); populateStoreDropdowns();
   addIngredientRow();
+  // Restore last visited page
+  try {
+    const saved = localStorage.getItem('cartlist_page');
+    if (saved && ALL_PAGES.includes(saved)) setTimeout(()=>showPage(saved), 0);
+  } catch(e) {}
 }
 
 // NAV
@@ -1117,6 +1136,7 @@ window.showPage = function(page) {
   if(page==='stores') renderStores();
   if(page==='inventory') renderInvPage();
   if(page==='settings') renderSettingsPage();
+  try { localStorage.setItem('cartlist_page', page); } catch(e) {}
 };
 
 // MODALS
@@ -1457,7 +1477,11 @@ function showDayPanel(ds) {
   const el=document.getElementById('day-panel-meals');
   if(!dayMeals.length && !dayPlans.length){el.innerHTML='<div class="empty-state" style="padding:1rem 0;"><div class="empty-sub">No meals or plans on this date.</div></div>';return;}
   const mealHTML=dayMeals.map(m=>`<div class="meal-item"><div class="meal-color-dot" style="background:${mealColor(m.name)}"></div><div class="meal-info"><div class="meal-name">${m.name}${m._owner==='household'?' <span class="pill pill-blue" style="font-size:0.6rem;">🏠</span>':''}</div><div class="meal-meta"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}</div>${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}</div>${m._owner!=='household'?`<button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;">🗑️</button>`:''}</div>`).join('');
-  const planHTML=dayPlans.map(p=>`<div class="plan-card"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">${p.notes}</div>`:''}</div><button onclick="editPlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;margin-right:0.25rem;">✏️</button><button onclick="deletePlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;">🗑️</button></div>`).join('');
+  const planHTML=dayPlans.map(p=>{
+    const meta=[planTypeLabel(p.type),formatTime(p.time)].filter(Boolean).join(' · ');
+    const locLink=p.location?`<a href="https://maps.google.com?q=${encodeURIComponent(p.location)}" target="_blank" style="font-size:0.75rem;color:var(--purple);text-decoration:none;display:block;margin-top:0.2rem;">📍 ${p.location}</a>`:'';
+    return `<div class="plan-card"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${meta?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">${meta}</div>`:''} ${locLink}${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.1rem;font-style:normal;">${p.notes}</div>`:''}</div><button onclick="editPlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;margin-right:0.25rem;">✏️</button><button onclick="deletePlan('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:0.2rem;">🗑️</button></div>`;
+  }).join('');
   el.innerHTML=planHTML+mealHTML;
 }
 window.deleteMeal=async function(id){
@@ -1471,7 +1495,11 @@ function renderTodayMeals() {
   const tm=allMeals().filter(m=>m.date===t);
   const tp=allPlans().filter(p=>p.date===t);
   if(!tm.length && !tp.length){el.innerHTML=`<div class="empty-state"><span class="empty-icon">🍽️</span><div class="empty-title">No meals or plans today</div><div class="empty-sub">Add a meal to get started</div></div>`;return;}
-  const planHTML=tp.map(p=>`<div class="plan-card" style="margin-bottom:0.625rem;"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${p.notes?`<div style="font-size:0.75rem;color:var(--text-muted);">${p.notes}</div>`:''}</div><span class="pill pill-orange">Dinner Plan</span></div>`).join('');
+  const planHTML=tp.map(p=>{
+    const meta=[planTypeLabel(p.type),formatTime(p.time)].filter(Boolean).join(' · ');
+    const locLink=p.location?`<a href="https://maps.google.com?q=${encodeURIComponent(p.location)}" target="_blank" style="font-size:0.72rem;color:var(--purple);text-decoration:none;">📍 ${p.location}</a>`:'';
+    return `<div class="plan-card" style="margin-bottom:0.625rem;"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${meta?`<div style="font-size:0.75rem;color:var(--text-muted);">${meta}</div>`:''}${locLink?`<div>${locLink}</div>`:''}</div><span class="pill pill-orange">${planTypeLabel(p.type)||'Dinner Plan'}</span></div>`;
+  }).join('');
   const mealHTML=tm.map(m=>`<div class="card" style="display:flex;align-items:center;gap:0.75rem;padding:1rem;margin-bottom:0.625rem;"><div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div><div style="flex:1;"><div style="font-family:'Nunito',sans-serif;font-weight:800;">${m.name}</div><div style="display:flex;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).length?`<span class="pill pill-gray">${m.ingredients.length} ingredients</span>`:''}</div></div></div>`).join('');
   el.innerHTML=planHTML+mealHTML;
 }
@@ -2674,15 +2702,22 @@ window.savePlan = async function() {
   if (!name) return alert('Please enter a plan.');
   const date = document.getElementById('plan-date').value;
   if (!date) return alert('Please select a date.');
+  const time = document.getElementById('plan-time').value;
+  const type = document.getElementById('plan-type').value;
+  const location = document.getElementById('plan-location').value.trim();
   const notes = document.getElementById('plan-notes').value.trim();
   const editId = document.getElementById('edit-plan-id').value;
+  const data = {name, date, time, type, location, notes};
   if (editId) {
-    await updateDoc(doc(db, `users/${uid()}/dinnerPlans/${editId}`), {name, date, notes});
+    await updateDoc(doc(db, `users/${uid()}/dinnerPlans/${editId}`), data);
   } else {
-    await addDoc(userCol('dinnerPlans'), {name, date, notes, createdAt: serverTimestamp()});
+    await addDoc(userCol('dinnerPlans'), {...data, createdAt: serverTimestamp()});
   }
   document.getElementById('plan-name').value = '';
+  document.getElementById('plan-location').value = '';
   document.getElementById('plan-notes').value = '';
+  document.getElementById('plan-time').value = '';
+  document.getElementById('plan-type').value = '';
   document.getElementById('edit-plan-id').value = '';
   document.getElementById('add-plan-modal-title').textContent = 'Add Dinner Plans';
   closeModal('modal-add-plan');
@@ -2695,6 +2730,9 @@ window.editPlan = function(id) {
   document.getElementById('edit-plan-id').value = id;
   document.getElementById('plan-name').value = p.name || '';
   document.getElementById('plan-date').value = p.date || '';
+  document.getElementById('plan-time').value = p.time || '';
+  document.getElementById('plan-type').value = p.type || '';
+  document.getElementById('plan-location').value = p.location || '';
   document.getElementById('plan-notes').value = p.notes || '';
   openModal('modal-add-plan');
 };
@@ -2709,6 +2747,9 @@ window.deletePlan = async function(id) {
 window.openAddPlanForDate = function() {
   document.getElementById('plan-date').value = S.selDate || todayStr();
   document.getElementById('plan-name').value = '';
+  document.getElementById('plan-time').value = '';
+  document.getElementById('plan-type').value = '';
+  document.getElementById('plan-location').value = '';
   document.getElementById('plan-notes').value = '';
   document.getElementById('edit-plan-id').value = '';
   document.getElementById('add-plan-modal-title').textContent = 'Add Dinner Plans';
@@ -2858,6 +2899,18 @@ window.doChangePassword = async function() {
     errEl.style.display = 'block';
   }
 };
+
+function formatTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function planTypeLabel(t) {
+  return {breakfast:'Breakfast',brunch:'Brunch',lunch:'Lunch',dinner:'Dinner',other:'Other'}[t] || '';
+}
 
 console.log('cartlist ✓');
 </script>
