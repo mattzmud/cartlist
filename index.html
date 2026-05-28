@@ -545,6 +545,15 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <div class="form-group"><label>Date *</label><input type="date" id="meal-date" placeholder="Select a date"></div>
     </div>
     <div class="form-group"><label>Notes</label><textarea class="note-area" id="meal-notes" placeholder="Any notes for this instance..."></textarea></div>
+    <!-- List selector - shown when user is in a household -->
+    <div id="meal-list-selector-row" class="hidden" style="margin-bottom:0.75rem;">
+      <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Add ingredients to which list?</div>
+      <div class="view-tabs" style="background:var(--bg);border-radius:var(--radius-sm);padding:3px;">
+        <button class="view-tab active" id="meal-list-personal" onclick="setMealList('personal',this)">👤 My List</button>
+        <button class="view-tab" id="meal-list-household" onclick="setMealList('household',this)">🏠 Household</button>
+      </div>
+    </div>
+    <div id="meal-list-selector" data-target="personal" style="display:none;"></div>
     <div style="margin-bottom:0.75rem;">
       <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Ingredients to Buy</div>
       <div style="background:#FEFCE8;border:1.5px solid #FDE047;border-radius:var(--radius-sm);padding:0.6rem 0.875rem;font-size:0.78rem;color:#854D0E;margin-bottom:0.625rem;line-height:1.4;">
@@ -966,8 +975,11 @@ function userCol(p) { return collection(db, `users/${uid()}/${p}`); }
 function ownerUid() { return S.household?.ownerUid || uid(); }
 function hhRef(p) { return doc(db, `users/${ownerUid()}/${p}`); }
 function hhCol(p) { return collection(db, `users/${ownerUid()}/${p}`); }
-// For owner adding TO their household list specifically (same as userCol when owner)
-function myHhCol(p) { return collection(db, `users/${uid()}/${p}`); }
+// Household shopping list always lives at hhShopItems (separate from personal shopItems)
+// Owner: users/{uid}/hhShopItems  |  Guest: users/{ownerUid}/hhShopItems
+function hhShopCol() { return collection(db, `users/${ownerUid()}/hhShopItems`); }
+function hhShopHistCol() { return collection(db, `users/${ownerUid()}/hhShopHistory`); }
+function inHousehold() { return !!(S.householdCode || S.household); }
 function canAccess(perm) { if (!S.household) return true; return !!S.household.permissions?.[perm]; }
 function isGuest() { return !!S.household; }
 function isOwner() { return !S.household; }
@@ -1051,6 +1063,9 @@ function initListeners() {
   S.unsubs.push(onSnapshot(userCol('meals'), s => { S.meals={}; s.forEach(d=>S.meals[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); renderShoppingList(); }));
   S.unsubs.push(onSnapshot(userCol('dinnerPlans'), s => { S.plans={}; s.forEach(d=>S.plans[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); }));
   S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data(),_owner:'personal'})); renderShoppingList(); updateCartTotal(); }));
+  // Owner's household shopping list (separate collection)
+  S.unsubs.push(onSnapshot(collection(db,`users/${uid()}/hhShopItems`), s => { S.hhShopItems=[]; s.forEach(d=>S.hhShopItems.push({id:d.id,...d.data(),_owner:'household'})); renderShoppingList(); updateCartTotal(); }));
+  S.unsubs.push(onSnapshot(collection(db,`users/${uid()}/hhShopHistory`), s => { S.hhShopHistory=[]; s.forEach(d=>S.hhShopHistory.push({id:d.id,...d.data(),_owner:'household'})); renderHistCalendar(); renderHistList(); }));
   S.unsubs.push(onSnapshot(userCol('favMeals'), s => { S.favMeals=[]; s.forEach(d=>S.favMeals.push({id:d.id,...d.data()})); renderFavPage(); renderModalFavs(); }));
   S.unsubs.push(onSnapshot(userCol('favItems'), s => { S.favItems=[]; s.forEach(d=>S.favItems.push({id:d.id,...d.data()})); renderFavItemsPage(); renderModalFavItems(); }));
   S.unsubs.push(onSnapshot(userCol('stores'), s => { S.stores=[]; s.forEach(d=>S.stores.push({id:d.id,...d.data()})); renderStores(); populateStoreDropdowns(); renderShoppingList(); }));
@@ -1146,8 +1161,8 @@ function subscribeHouseholdData() {
   const p = S.household?.permissions || {};
 
   if (p.shopping) {
-    S.hhUnsubs.push(onSnapshot(hhCol('shopItems'), s => { S.hhShopItems=[]; s.forEach(d=>S.hhShopItems.push({id:d.id,...d.data(),_owner:'household'})); renderShoppingList(); updateCartTotal(); }));
-    S.hhUnsubs.push(onSnapshot(hhCol('shopHistory'), s => { S.hhShopHistory=[]; s.forEach(d=>S.hhShopHistory.push({id:d.id,...d.data(),_owner:'household'})); renderHistCalendar(); renderHistList(); }));
+    S.hhUnsubs.push(onSnapshot(collection(db,`users/${ownerUid()}/hhShopItems`), s => { S.hhShopItems=[]; s.forEach(d=>S.hhShopItems.push({id:d.id,...d.data(),_owner:'household'})); renderShoppingList(); updateCartTotal(); }));
+    S.hhUnsubs.push(onSnapshot(collection(db,`users/${ownerUid()}/hhShopHistory`), s => { S.hhShopHistory=[]; s.forEach(d=>S.hhShopHistory.push({id:d.id,...d.data(),_owner:'household'})); renderHistCalendar(); renderHistList(); }));
   }
   if (p.meals) {
     S.hhUnsubs.push(onSnapshot(hhCol('meals'), s => { S.hhMeals={}; s.forEach(d=>S.hhMeals[d.id]={id:d.id,...d.data(),_owner:'household'}); renderCalendar(); renderTodayMeals(); }));
@@ -1233,6 +1248,15 @@ window.openAddMealModal = function() {
   document.getElementById('meal-fav-toggle').classList.remove('on');
   addIngredientRow();
   setMealMode('new', document.getElementById('meal-mode-new'));
+  // Show household list selector if in a household
+  const mealSelRow = document.getElementById('meal-list-selector-row');
+  if (mealSelRow) mealSelRow.classList.toggle('hidden', !inHousehold());
+  // Reset to personal
+  const pBtn = document.getElementById('meal-list-personal');
+  const hBtn = document.getElementById('meal-list-household');
+  if(pBtn) pBtn.classList.add('active');
+  if(hBtn) hBtn.classList.remove('active');
+  document.getElementById('meal-list-selector')?.setAttribute('data-target','personal');
   openModal('modal-add-meal');
 };
 
@@ -1421,12 +1445,9 @@ window.saveItem = async function() {
     const editItem = allShopItems().find(i=>i.id===editId);
     const editPath = editItem?._owner==='household' ? `users/${ownerUid()}/shopItems/${editId}` : `users/${uid()}/shopItems/${editId}`;
     await updateDoc(doc(db,editPath), {name,category,store,qty,price,notes});
-  } else if(listTarget === 'household' && S.householdCode) {
-    // Owner adding to household list
-    await addDoc(myHhCol('shopItems'), {...data, _owner:'household'});
-  } else if(isGuest() && listTarget === 'household' && canAccess('shopping')) {
-    // Guest adding to owner's household list
-    await addDoc(hhCol('shopItems'), data);
+  } else if(listTarget === 'household' && inHousehold()) {
+    // Add to household list (works for both owner and guest)
+    await addDoc(hhShopCol(), {...data, _owner:'household'});
   } else {
     await addDoc(userCol('shopItems'), data);
   }
@@ -1464,7 +1485,7 @@ function resetItemModal() {
 window.removeShopItem = async function() {
   if(!S.curShopItem) return;
   const item=S.curShopItem;
-  const path=item._owner==='household'?`users/${ownerUid()}/shopItems/${item.id}`:`users/${uid()}/shopItems/${item.id}`;
+  const path=item._owner==='household'?`users/${ownerUid()}/hhShopItems/${item.id}`:`users/${uid()}/shopItems/${item.id}`;
   await deleteDoc(doc(db,path));
   closeModal('modal-item-detail'); S.curShopItem=null;
 };
@@ -1502,8 +1523,10 @@ window.saveMeal = async function() {
   if(editId) { await updateDoc(doc(db,`users/${uid()}/meals/${editId}`),{name,type,date,notes,ingredients}); }
   else {
     const mref=await addDoc(userCol('meals'),{name,type,date,notes,ingredients,isFav,createdAt:serverTimestamp()});
+    const mealListTarget = document.getElementById('meal-list-selector')?.getAttribute('data-target') || 'personal';
+    const ingCol = (mealListTarget === 'household' && inHousehold()) ? hhShopCol() : userCol('shopItems');
     for(const ing of ingredients) {
-      await addDoc(userCol('shopItems'),{name:ing.name,qty:ing.qty,price:0,category:'',store:'',notes:'',photoUrl:'',source:'meal',mealId:mref.id,mealName:name,checked:false,createdAt:serverTimestamp()});
+      await addDoc(ingCol,{name:ing.name,qty:ing.qty,price:0,category:'',store:'',notes:'',photoUrl:'',source:'meal',mealId:mref.id,mealName:name,checked:false,_owner:mealListTarget==='household'?'household':'personal',createdAt:serverTimestamp()});
     }
   }
   if(isFav && !editId) await addDoc(userCol('favMeals'),{name,type,notes,ingredients,createdAt:serverTimestamp()});
@@ -1517,6 +1540,8 @@ function resetMealModal() {
   document.getElementById('add-meal-modal-title').textContent='Add Meal';
   document.getElementById('ingredient-rows').innerHTML=''; addIngredientRow();
   setMealMode('new', document.getElementById('meal-mode-new'));
+  document.getElementById('meal-list-selector')?.setAttribute('data-target','personal');
+  const pBtn=document.getElementById('meal-list-personal'); if(pBtn){document.querySelectorAll('#meal-list-selector-row .view-tab').forEach(t=>t.classList.remove('active'));pBtn.classList.add('active');}
 }
 
 // CALENDAR
@@ -1780,12 +1805,12 @@ function getStoreName(storeId) {
 window.toggleShopItem=async function(id,event){
   event.stopPropagation();
   const item=allShopItems().find(i=>i.id===id); if(!item) return;
-  const colPath=item._owner==='household'?`users/${ownerUid()}/shopItems/${id}`:`users/${uid()}/shopItems/${id}`;
+  const colPath=item._owner==='household'?`users/${ownerUid()}/hhShopItems/${id}`:`users/${uid()}/shopItems/${id}`;
   await updateDoc(doc(db,colPath),{checked:!item.checked});
 };
 window.updateItemQty=async function(id,val){
   const item=allShopItems().find(i=>i.id===id); if(!item) return;
-  const colPath=item._owner==='household'?`users/${ownerUid()}/shopItems/${id}`:`users/${uid()}/shopItems/${id}`;
+  const colPath=item._owner==='household'?`users/${ownerUid()}/hhShopItems/${id}`:`users/${uid()}/shopItems/${id}`;
   await updateDoc(doc(db,colPath),{qty:parseInt(val)||1});
 };
 // updateCartTotal replaced by household-aware version above
@@ -1822,7 +1847,7 @@ window.confirmCompleteShop=async function(){
   // Household history entry (if any hh items checked)
   if (hhChecked.length && canAccess('shopping')) {
     await addDoc(hhCol('shopHistory'),{date:todayStr(),notes,stores,total:hhChecked.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1),0),items:hhChecked.map(i=>({name:i.name,qty:i.qty||1,price:i.price||0,category:i.category||'',store:getStoreName(i.store)||'',mealNames:i.mealNames||[],_owner:'household'})),receipts:[],_owner:'household',createdAt:serverTimestamp()});
-    for(const item of hhChecked) await deleteDoc(doc(db,`users/${ownerUid()}/shopItems/${item.id}`));
+    for(const item of hhChecked) await deleteDoc(doc(db,`users/${ownerUid()}/hhShopItems/${item.id}`));
   }
   closeModal('modal-complete-shop');
   // Update inventory quantities from purchased items
@@ -1942,7 +1967,7 @@ window.saveShopItemEdit=async function(){
   const price=parseFloat(document.getElementById('edit-shop-price').value)||0;
   const notes=document.getElementById('edit-shop-notes').value.trim();
   const editItem=allShopItems().find(i=>i.id===id);
-  const editPath=editItem?._owner==='household'?`users/${ownerUid()}/shopItems/${id}`:`users/${uid()}/shopItems/${id}`;
+  const editPath=editItem?._owner==='household'?`users/${ownerUid()}/hhShopItems/${id}`:`users/${uid()}/shopItems/${id}`;
   await updateDoc(doc(db,editPath),{name,category,store,qty,price,notes});
   closeModal('modal-edit-shop-item');
 };
@@ -2305,7 +2330,7 @@ window.saveInvItem = async function() {
 
   // Optionally also add to shopping list
   if(addToShop) {
-    await addDoc(userCol('shopItems'), {name,category,store:storeId,qty:1,price,notes,photoUrl,source:'inventory',checked:false,createdAt:serverTimestamp()});
+    await addDoc(userCol('shopItems'), {name,category,store:storeId,qty:1,price,notes,photoUrl,source:'inventory',checked:false,_owner:'personal',createdAt:serverTimestamp()});
   }
 
   // Reset toggle
@@ -2414,8 +2439,8 @@ async function addItemsToList(items, listType) {
   for (const item of items) {
     const storeId = item.storeId||'';
     const data = {name:item.name,category:item.category||'',store:storeId,qty:1,price:0,notes:'',photoUrl:'',source:'inventory',invItemId:item.id,checked:false,createdAt:serverTimestamp()};
-    if (listType==='household' && canAccess('shopping') && isGuest()) {
-      await addDoc(hhCol('shopItems'), data);
+    if (listType==='household' && inHousehold()) {
+      await addDoc(hhShopCol(), {...data, _owner:'household'});
     } else {
       await addDoc(userCol('shopItems'), data);
     }
@@ -3085,6 +3110,12 @@ window.setItemList = function(target, btn) {
   document.querySelectorAll('#item-list-selector .view-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('item-list-selector')?.setAttribute('data-target', target);
+};
+
+window.setMealList = function(target, btn) {
+  document.querySelectorAll('#meal-list-selector-row .view-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('meal-list-selector')?.setAttribute('data-target', target);
 };
 
 console.log('cartlist ✓');
