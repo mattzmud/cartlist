@@ -2511,8 +2511,8 @@ window.saveTakeInventory = async function() {
 // --- Restock Modal ---
 window.openRestockModal = function() {
   const locItems = S.invItems[S.curInvLocationId]||[];
-  const restockItems = locItems.filter(i=>(i.qty||0)<=(i.restock||0));
-  const lowItems = locItems.filter(i=>(i.qty||0)>(i.restock||0)&&(i.qty||0)<=(i.lowStock||0));
+  const restockItems = locItems.filter(i=>i.trackStock && i.restock!==null && i.restock!==undefined && (i.qty||0)<=i.restock);
+  const lowItems = locItems.filter(i=>i.trackStock && i.lowStock!==null && i.lowStock!==undefined && (i.qty||0)>i.restock && (i.qty||0)<=i.lowStock);
   renderRestockContent(restockItems, lowItems);
   openModal('modal-restock');
 };
