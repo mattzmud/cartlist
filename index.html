@@ -1117,9 +1117,9 @@ async function loadProfile() {
 function initListeners() {
   S.unsubs.push(onSnapshot(userCol('meals'), s => { S.meals={}; s.forEach(d=>S.meals[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); renderShoppingList(); }));
   S.unsubs.push(onSnapshot(userCol('dinnerPlans'), s => { S.plans={}; s.forEach(d=>S.plans[d.id]={id:d.id,...d.data()}); renderCalendar(); renderTodayMeals(); }));
-  S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data(),_owner:'personal'})); renderShoppingList(); updateCartTotal(); }));
+  S.unsubs.push(onSnapshot(userCol('shopItems'), s => { S.shopItems=[]; s.forEach(d=>S.shopItems.push({id:d.id,...d.data(),_owner:'personal'})); renderShoppingList(); updateCartTotal(); renderTodayMeals(); }));
   // Owner's household shopping list (separate collection)
-  S.unsubs.push(onSnapshot(collection(db,`users/${uid()}/hhShopItems`), s => { S.hhShopItems=[]; s.forEach(d=>S.hhShopItems.push({id:d.id,...d.data(),_owner:'household'})); renderShoppingList(); updateCartTotal(); }));
+  S.unsubs.push(onSnapshot(collection(db,`users/${uid()}/hhShopItems`), s => { S.hhShopItems=[]; s.forEach(d=>S.hhShopItems.push({id:d.id,...d.data(),_owner:'household'})); renderShoppingList(); updateCartTotal(); renderTodayMeals(); }));
   S.unsubs.push(onSnapshot(collection(db,`users/${uid()}/hhShopHistory`), s => { S.hhShopHistory=[]; s.forEach(d=>S.hhShopHistory.push({id:d.id,...d.data(),_owner:'household'})); renderHistCalendar(); renderHistList(); }));
   S.unsubs.push(onSnapshot(userCol('favMeals'), s => { S.favMeals=[]; s.forEach(d=>S.favMeals.push({id:d.id,...d.data()})); renderFavPage(); renderModalFavs(); }));
   S.unsubs.push(onSnapshot(userCol('favItems'), s => { S.favItems=[]; s.forEach(d=>S.favItems.push({id:d.id,...d.data()})); renderFavItemsPage(); renderModalFavItems(); }));
@@ -1639,10 +1639,7 @@ function showDayPanel(ds) {
   const el=document.getElementById('day-panel-meals');
   if(!dayMeals.length && !dayPlans.length){el.innerHTML='<div class="empty-state" style="padding:1rem 0;"><div class="empty-sub">No meals or plans on this date.</div></div>';return;}
   const mealHTML=dayMeals.map(m=>{
-    const pending = allShopItems().filter(i=>i.mealId===m.id && !i.checked);
-    const shopWarning = pending.length
-      ? `<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem;padding:0.35rem 0.6rem;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;font-size:0.72rem;color:#854D0E;font-weight:600;">🛒 ${pending.length} item${pending.length!==1?'s':''} still needed — shopping not complete</div>`
-      : '';
+    const shopWarning = buildShopWarning(m.id);
     return `<div class="meal-item" style="flex-direction:column;align-items:flex-start;gap:0.4rem;">
       <div style="display:flex;align-items:flex-start;gap:0.875rem;width:100%;">
         <div class="meal-color-dot" style="background:${mealColor(m.name)};margin-top:4px;"></div>
@@ -1673,6 +1670,19 @@ window.deleteMeal=async function(id){
   if(confirm('Remove this meal?')){await deleteDoc(doc(db,`users/${uid()}/meals/${id}`));if(S.selDate)showDayPanel(S.selDate);}
 };
 
+function buildShopWarning(mealId) {
+  const pending = allShopItems().filter(i=>i.mealId===mealId && !i.checked);
+  if (!pending.length) return '';
+  const itemList = pending.map(i=>`<li style="margin:0.15rem 0 0 0.5rem;">${i.name}</li>`).join('');
+  return `<div style="margin-top:0.5rem;padding:0.6rem 0.75rem;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;font-size:0.75rem;color:#854D0E;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+      <span style="font-weight:700;">🛒 ${pending.length} item${pending.length!==1?'s':''} still needed</span>
+      <button onclick="showPage('shopping')" style="background:none;border:none;cursor:pointer;color:#854D0E;font-weight:700;font-size:0.75rem;text-decoration:underline;padding:0;font-family:'Nunito',sans-serif;">Go to Shopping List →</button>
+    </div>
+    <ul style="margin:0.35rem 0 0 0.25rem;padding:0;list-style:disc;padding-left:1rem;">${itemList}</ul>
+  </div>`;
+}
+
 function renderTodayMeals() {
   const el=document.getElementById('home-today-meals'); const t=todayStr();
   const tm=allMeals().filter(m=>m.date===t);
@@ -1684,13 +1694,7 @@ function renderTodayMeals() {
     return `<div class="plan-card" style="margin-bottom:0.625rem;"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${meta?`<div style="font-size:0.75rem;color:var(--text-muted);">${meta}</div>`:''}${locLink?`<div>${locLink}</div>`:''}</div><span class="pill pill-orange">${planTypeLabel(p.type)||'Dinner Plan'}</span></div>`;
   }).join('');
   const mealHTML=tm.map(m=>{
-    // Check for unchecked shopping items linked to this meal
-    const pendingItems = allShopItems().filter(i=>i.mealId===m.id && !i.checked);
-    const shopWarning = pendingItems.length
-      ? `<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem;padding:0.4rem 0.625rem;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;font-size:0.75rem;color:#854D0E;font-weight:600;">
-          🛒 ${pendingItems.length} item${pendingItems.length!==1?'s':''} still needed — shopping not complete
-        </div>`
-      : '';
+    const shopWarning = buildShopWarning(m.id);
     return `<div class="card" style="padding:1rem;margin-bottom:0.625rem;">
       <div style="display:flex;align-items:center;gap:0.75rem;">
         <div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div>
