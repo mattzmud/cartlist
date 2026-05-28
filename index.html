@@ -1638,7 +1638,28 @@ function showDayPanel(ds) {
   const dayPlans=allPlans().filter(p=>p.date===ds);
   const el=document.getElementById('day-panel-meals');
   if(!dayMeals.length && !dayPlans.length){el.innerHTML='<div class="empty-state" style="padding:1rem 0;"><div class="empty-sub">No meals or plans on this date.</div></div>';return;}
-  const mealHTML=dayMeals.map(m=>`<div class="meal-item"><div class="meal-color-dot" style="background:${mealColor(m.name)}"></div><div class="meal-info"><div class="meal-name">${m.name}${m._owner==='household'?' <span class="pill pill-blue" style="font-size:0.6rem;">🏠</span>':''}</div><div class="meal-meta"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}</div>${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}</div>${m._owner!=='household'?`<button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;">🗑️</button>`:''}</div>`).join('');
+  const mealHTML=dayMeals.map(m=>{
+    const pending = allShopItems().filter(i=>i.mealId===m.id && !i.checked);
+    const shopWarning = pending.length
+      ? `<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem;padding:0.35rem 0.6rem;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;font-size:0.72rem;color:#854D0E;font-weight:600;">🛒 ${pending.length} item${pending.length!==1?'s':''} still needed — shopping not complete</div>`
+      : '';
+    return `<div class="meal-item" style="flex-direction:column;align-items:flex-start;gap:0.4rem;">
+      <div style="display:flex;align-items:flex-start;gap:0.875rem;width:100%;">
+        <div class="meal-color-dot" style="background:${mealColor(m.name)};margin-top:4px;"></div>
+        <div class="meal-info" style="flex:1;">
+          <div class="meal-name">${m.name}${m._owner==='household'?' <span class="pill pill-blue" style="font-size:0.6rem;">🏠</span>':''}</div>
+          <div class="meal-meta">
+            <span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>
+            ${(m.ingredients||[]).slice(0,3).map(i=>`<span class="pill pill-gray">${i.name}</span>`).join('')}
+            ${(m.ingredients||[]).length>3?`<span class="pill pill-gray">+${m.ingredients.length-3} more</span>`:''}
+          </div>
+          ${m.notes?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">${m.notes}</div>`:''}
+        </div>
+        ${m._owner!=='household'?`<button onclick="deleteMeal('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:0.2rem;flex-shrink:0;">🗑️</button>`:''}
+      </div>
+      ${shopWarning}
+    </div>`;
+  }).join('');
   const planHTML=dayPlans.map(p=>{
     const meta=[planTypeLabel(p.type),formatTime(p.time)].filter(Boolean).join(' · ');
     const locLink=p.location?`<a href="https://maps.google.com?q=${encodeURIComponent(p.location)}" target="_blank" style="font-size:0.75rem;color:var(--purple);text-decoration:none;display:block;margin-top:0.2rem;">📍 ${p.location}</a>`:'';
@@ -1662,7 +1683,28 @@ function renderTodayMeals() {
     const locLink=p.location?`<a href="https://maps.google.com?q=${encodeURIComponent(p.location)}" target="_blank" style="font-size:0.72rem;color:var(--purple);text-decoration:none;">📍 ${p.location}</a>`:'';
     return `<div class="plan-card" style="margin-bottom:0.625rem;"><div class="plan-card-icon">🍴</div><div style="flex:1;"><div class="plan-card-name">${p.name}</div>${meta?`<div style="font-size:0.75rem;color:var(--text-muted);">${meta}</div>`:''}${locLink?`<div>${locLink}</div>`:''}</div><span class="pill pill-orange">${planTypeLabel(p.type)||'Dinner Plan'}</span></div>`;
   }).join('');
-  const mealHTML=tm.map(m=>`<div class="card" style="display:flex;align-items:center;gap:0.75rem;padding:1rem;margin-bottom:0.625rem;"><div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div><div style="flex:1;"><div style="font-family:'Nunito',sans-serif;font-weight:800;">${m.name}</div><div style="display:flex;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;"><span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>${(m.ingredients||[]).length?`<span class="pill pill-gray">${m.ingredients.length} ingredients</span>`:''}</div></div></div>`).join('');
+  const mealHTML=tm.map(m=>{
+    // Check for unchecked shopping items linked to this meal
+    const pendingItems = allShopItems().filter(i=>i.mealId===m.id && !i.checked);
+    const shopWarning = pendingItems.length
+      ? `<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem;padding:0.4rem 0.625rem;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;font-size:0.75rem;color:#854D0E;font-weight:600;">
+          🛒 ${pendingItems.length} item${pendingItems.length!==1?'s':''} still needed — shopping not complete
+        </div>`
+      : '';
+    return `<div class="card" style="padding:1rem;margin-bottom:0.625rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${mealColor(m.name)};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;">${m.name}</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;">
+            <span class="pill ${mealTypeClass(m.type)}">${mealTypeLabel(m.type)}</span>
+            ${(m.ingredients||[]).length?`<span class="pill pill-gray">${m.ingredients.length} ingredients</span>`:''}
+          </div>
+        </div>
+      </div>
+      ${shopWarning}
+    </div>`;
+  }).join('');
   el.innerHTML=planHTML+mealHTML;
 }
 
