@@ -374,6 +374,16 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <button class="btn btn-secondary" onclick="completeShop()">✅ Complete Shop</button>
     </div>
     <div id="shopping-list-content"></div>
+    <!-- Pill key -->
+    <div id="shop-list-key" style="margin-top:1rem;padding:0.875rem 1rem;background:var(--card);border-radius:var(--radius-sm);border:1.5px solid var(--border);">
+      <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.6rem;">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.75rem;color:var(--text-muted);">
+        <div style="display:flex;align-items:center;gap:0.5rem;"><span class="pill pill-green" style="font-size:0.65rem;">Meal Name</span> Item added from a planned meal</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;"><span class="pill pill-gray" style="font-size:0.65rem;">General</span> Item added manually to your list</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;"><span class="pill pill-earth" style="font-size:0.65rem;">Category</span> Item category</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;"><span class="pill pill-blue" style="font-size:0.65rem;">🏠 Household</span> Shared household item</div>
+      </div>
+    </div>
     <div style="margin-top:1.5rem;padding-top:1rem;border-top:2px solid var(--border);">
       <button class="btn btn-outline" style="width:100%;" onclick="showPage('history')">📋 View Shop History</button>
     </div>
@@ -1574,7 +1584,14 @@ function getVisibleItems() {
   const end=document.getElementById('range-end').value;
   const rangeMeals=allMeals().filter(m=>(!start||m.date>=start)&&(!end||m.date<=end));
   const rangeMealIds=new Set(rangeMeals.map(m=>m.id));
-  return allShopItems().filter(i=>!i.mealId||rangeMealIds.has(i.mealId));
+  const visible = allShopItems().filter(i=>!i.mealId||rangeMealIds.has(i.mealId));
+  // Enrich each item: ensure mealNames array is populated from mealName string if needed
+  return visible.map(i => {
+    if (i.mealName && (!i.mealNames || !i.mealNames.length)) {
+      return {...i, mealNames: [i.mealName]};
+    }
+    return i;
+  });
 }
 
 window.renderShoppingList=function(){
@@ -1592,8 +1609,10 @@ function renderItemList(items) { return items.map(i=>renderShopItem(i)).join('')
 
 function renderShopItem(item) {
   const sname=getStoreName(item.store);
-  const mealPills=(item.mealNames||[]).filter(Boolean).map((mn,i)=>`<span class="pill ${pillClass(i)}">${mn}</span>`).join('');
-  const genPill=(!item.mealId&&!(item.mealNames||[]).length)?`<span class="pill pill-gray">General</span>`:'';
+  // Normalise: items saved from meals use mealName (string), deduped items use mealNames (array)
+  const resolvedMealNames = item.mealNames?.length ? item.mealNames : (item.mealName ? [item.mealName] : []);
+  const mealPills=resolvedMealNames.filter(Boolean).map((mn,i)=>`<span class="pill ${pillClass(i)}">${mn}</span>`).join('');
+  const genPill=(!item.mealId&&!resolvedMealNames.length)?`<span class="pill pill-gray">General</span>`:'';
   const hhBadge=item._owner==='household'?`<span class="pill pill-blue">🏠</span>`:'';
   return `<div class="shop-item${item.checked?' checked':''}" id="si-${item.id}"><div class="shop-checkbox${item.checked?' checked':''}" onclick="toggleShopItem('${item.id}',event)">${item.checked?'✓':''}</div><div class="shop-item-content" onclick="openItemDetail('${item.id}')"><div class="shop-item-name">${item.name}</div><div class="shop-item-meta">${hhBadge}${mealPills}${genPill}${item.category?`<span class="pill pill-earth">${item.category}</span>`:''}${sname?`<span style="font-size:0.7rem;color:var(--text-muted);">${sname}</span>`:''}</div></div><div class="shop-item-right"><input type="number" class="shop-item-qty" value="${item.qty||1}" min="1" onclick="event.stopPropagation()" onchange="updateItemQty('${item.id}',this.value)">${item.price?`<div class="shop-item-price">$${(parseFloat(item.price)*(item.qty||1)).toFixed(2)}</div>`:''}</div></div>`;
 }
