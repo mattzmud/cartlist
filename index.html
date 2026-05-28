@@ -1005,6 +1005,7 @@ const S = {
   // Household
   household: null,         // { ownerUid, code, permissions:{meals,shopping,favorites,stores} } — set if user is a GUEST
   householdPermissions: null, // owner's view: the baseline permissions set at code generation
+  householdCode: null,        // owner's share code
   householdMembers: [],    // [ { uid, firstName, joinedAt } ] — set if user is OWNER
   hhMeals: {}, hhPlans: {}, hhShopItems: [], hhFavMeals: [], hhFavItems: [], hhStores: [], hhShopHistory: [],
   // Inventory
@@ -3210,7 +3211,15 @@ window.openMemberPerms = function(memberUid) {
 
 window.saveMemberPerms = async function() {
   const memberUid = document.getElementById('member-perms-uid').value;
-  if (!memberUid || !S.householdCode) return;
+  if (!memberUid) return alert('No member selected.');
+
+  // Get the household code from multiple fallbacks
+  const code = S.householdCode
+    || S.householdPermissions?.code
+    || (await getDoc(doc(db, `users/${uid()}/household/config`))).data()?.code;
+
+  if (!code) { alert('Could not find your household code. Please try again.'); return; }
+  if (!S.householdCode) S.householdCode = code; // cache it
 
   const invPerms = {};
   S.locations.forEach(l => {
@@ -3226,15 +3235,20 @@ window.saveMemberPerms = async function() {
     inventory: invPerms,
   };
 
-  // Save per-member permissions to /households/{code}/members/{uid}
-  await updateDoc(doc(db, `households/${S.householdCode}/members/${memberUid}`), { permissions });
+  try {
+    // Save per-member permissions to /households/{code}/members/{uid}
+    await setDoc(doc(db, `households/${code}/members/${memberUid}`), { permissions }, { merge: true });
 
-  // Update local state
-  const m = S.householdMembers.find(x=>x.id===memberUid);
-  if (m) m.permissions = permissions;
+    // Update local state
+    const m = S.householdMembers.find(x=>x.id===memberUid);
+    if (m) m.permissions = permissions;
 
-  closeModal('modal-member-perms');
-  renderSettingsPage();
+    closeModal('modal-member-perms');
+    renderSettingsPage();
+  } catch(e) {
+    console.error('saveMemberPerms error:', e);
+    alert(`Failed to save: ${e.code || e.message}`);
+  }
 };
 
 window.setItemList = function(target, btn) {
