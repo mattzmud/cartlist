@@ -233,7 +233,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .hamburger-btn { display: none; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg); align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; flex-direction: column; gap: 4px; padding: 8px; transition: all 0.2s; }
 .hamburger-btn:hover { border-color: var(--green); }
-.hamburger-btn span { display: block; width: 16px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.2s; }
 .hamburger-menu { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 260px; background: var(--card); box-shadow: -4px 0 24px rgba(26,26,46,0.15); z-index: 300; padding: 1.5rem 1rem; flex-direction: column; gap: 0.25rem; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; }
 .hamburger-menu.open { transform: translateX(0); }
 .hamburger-overlay { display: none; position: fixed; inset: 0; background: rgba(26,26,46,0.4); z-index: 299; }
@@ -243,6 +242,24 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .hamburger-menu .nav-item.active { background: #E8F5E9; color: var(--green); }
 .hamburger-menu-title { font-family: 'Nunito', sans-serif; font-size: 1.25rem; font-weight: 900; color: var(--green); margin-bottom: 1rem; padding: 0.25rem 1rem; }
 .hh-badge { background: #E0F2FE; color: #0369A1; font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 100px; font-weight: 700; font-family: 'Nunito', sans-serif; }
+.inv-tab-bar { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1rem; scrollbar-width: none; }
+.inv-tab-bar::-webkit-scrollbar { display: none; }
+.inv-tab { padding: 0.5rem 1rem; border-radius: 100px; border: 2px solid var(--border); background: var(--card); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; color: var(--text-muted); }
+.inv-tab.active { background: var(--green); border-color: var(--green); color: white; }
+.inv-item-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; background: var(--card); border-radius: var(--radius-sm); margin-bottom: 0.5rem; border: 2px solid var(--border); transition: all 0.2s; }
+.inv-item-row.low-stock { border-color: #FDE047; background: #FEFCE8; }
+.inv-item-row.restock { border-color: #FCA5A5; background: #FEF2F2; }
+.inv-item-info { flex: 1; min-width: 0; }
+.inv-item-name { font-weight: 700; font-family: 'Nunito', sans-serif; font-size: 0.9rem; }
+.inv-item-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+.inv-qty-badge { display: flex; flex-direction: column; align-items: center; gap: 1px; flex-shrink: 0; }
+.inv-qty-num { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.1rem; line-height: 1; }
+.inv-qty-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.stock-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.stock-ok { background: var(--green); }
+.stock-low { background: #F59E0B; }
+.stock-restock { background: #EF4444; }
+.hamburger-btn span { display: block; width: 16px; height: 2px; background: var(--text); border-radius: 2px; margin: 2px 0; }
 .hidden { display: none !important; }
 .mt-sm { margin-top: 0.5rem; }
 .mt-md { margin-top: 1rem; }
@@ -362,6 +379,9 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <button class="btn btn-secondary" onclick="completeShop()">✅ Complete Shop</button>
     </div>
     <div id="shopping-list-content"></div>
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:2px solid var(--border);">
+      <button class="btn btn-outline" style="width:100%;" onclick="showPage('history')">📋 View Shop History</button>
+    </div>
   </div>
 
   <!-- SHOP HISTORY -->
@@ -379,6 +399,16 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   </div>
 
   <!-- SETTINGS -->
+  <!-- INVENTORY PAGE -->
+  <div class="page" id="page-inventory">
+    <div class="page-title">Inventory</div>
+    <div style="background:#E8F5E9;border-radius:var(--radius-sm);padding:0.75rem 1rem;font-size:0.8rem;color:var(--green-dark);margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+      <span>💡</span><span>To add a new location, visit <button onclick="showPage('settings')" style="background:none;border:none;color:var(--green-dark);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;font-size:0.8rem;">Settings</button>.</span>
+    </div>
+    <div class="inv-tab-bar" id="inv-tab-bar"></div>
+    <div id="inv-location-content"></div>
+  </div>
+
   <div class="page" id="page-settings">
     <div class="page-title">Settings</div>
     <div class="settings-section">
@@ -398,6 +428,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
       <div class="settings-section-title">App</div>
       <div class="settings-row" onclick="showPage('stores')"><div><div class="settings-row-label">🏪 Stores</div><div class="settings-row-sub">Manage stores &amp; category order</div></div><div style="color:var(--text-muted);">›</div></div>
       <div class="settings-row" onclick="openManageCategories()"><div><div class="settings-row-label">🏷️ Categories</div><div class="settings-row-sub">Manage item categories</div></div><div style="color:var(--text-muted);">›</div></div>
+      <div class="settings-row" onclick="openManageLocations()"><div><div class="settings-row-label">📦 Inventory Locations</div><div class="settings-row-sub">Pantry, Linen Closet, and custom locations</div></div><div style="color:var(--text-muted);">›</div></div>
     </div>
     <!-- HOUSEHOLD SECTION — rendered dynamically -->
     <div id="settings-household-section"></div>
@@ -425,7 +456,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <button class="nav-item" onclick="showPage('calendar');closeHamburger();" id="hmenu-calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
     <button class="nav-item" onclick="showPage('favorites');closeHamburger();" id="hmenu-favorites"><span class="nav-icon">⭐</span><span>Favorites</span></button>
     <button class="nav-item" onclick="showPage('shopping');closeHamburger();" id="hmenu-shopping"><span class="nav-icon">🛒</span><span>Shopping</span></button>
-    <button class="nav-item" onclick="showPage('history');closeHamburger();" id="hmenu-history"><span class="nav-icon">📋</span><span>History</span></button>
+    <button class="nav-item" onclick="showPage('inventory');closeHamburger();" id="hmenu-inventory"><span class="nav-icon">📦</span><span>Inventory</span></button>
     <div style="height:1px;background:var(--border);margin:0.75rem 0;"></div>
     <button class="nav-item" onclick="showPage('settings');closeHamburger();" id="hmenu-settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
     <button class="nav-item" onclick="doLogout()" style="color:#DC2626;"><span class="nav-icon">→</span><span>Sign out</span></button>
@@ -437,7 +468,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <button class="nav-item" onclick="showPage('calendar')" id="nav-calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
     <button class="nav-item" onclick="showPage('favorites')" id="nav-favorites"><span class="nav-icon">⭐</span><span>Favorites</span></button>
     <button class="nav-item" onclick="showPage('shopping')" id="nav-shopping"><span class="nav-icon">🛒</span><span>Shopping</span></button>
-    <button class="nav-item" onclick="showPage('history')" id="nav-history"><span class="nav-icon">📋</span><span>History</span></button>
+    <button class="nav-item" onclick="showPage('inventory')" id="nav-inventory"><span class="nav-icon">📦</span><span>Inventory</span></button>
   </nav>
 </div>
 
@@ -650,6 +681,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
         <div><div style="font-weight:700;font-size:0.9rem;">🏪 Stores</div><div style="font-size:0.75rem;color:var(--text-muted);">View and use your saved stores</div></div>
         <input type="checkbox" id="perm-stores" style="width:18px;height:18px;">
       </label>
+      <div id="perm-inventory-locations" style="margin-top:0.25rem;"></div>
     </div>
   </div>
   <div id="hh-code-display" class="hidden" style="background:linear-gradient(135deg,var(--black),#2D1B69);border-radius:var(--radius);padding:1.5rem;text-align:center;margin-bottom:1rem;">
@@ -679,11 +711,89 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="modal-title"><span>Pick an Ingredient</span><button class="modal-close" onclick="closeModal('modal-ingr-picker')">✕</button></div>
   <div class="modal-tabs">
     <button class="modal-tab active" onclick="switchIngrTab('favorites',this)">⭐ Favorites</button>
-    <button class="modal-tab" onclick="switchIngrTab('recent',this)">🕐 Recent</button>
+    <button class="modal-tab" onclick="switchIngrTab('recent',this)">📦 Pantry</button>
   </div>
   <input type="text" id="ingr-picker-search" placeholder="Search..." style="width:100%;padding:0.6rem 0.875rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito Sans',sans-serif;font-size:0.9rem;background:var(--bg);outline:none;margin-bottom:0.75rem;" oninput="filterIngrPicker()">
   <div id="ingr-picker-favorites"></div>
   <div id="ingr-picker-recent" class="hidden"></div>
+</div></div>
+
+<!-- ADD/EDIT INVENTORY ITEM MODAL -->
+<div class="modal-overlay" id="modal-inv-item"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span id="inv-item-modal-title">Add Item</span><button class="modal-close" onclick="closeModal('modal-inv-item')">✕</button></div>
+  <input type="hidden" id="inv-item-id">
+  <input type="hidden" id="inv-item-location-id">
+  <div class="form-group"><label>Item Name *</label><input type="text" id="inv-item-name" placeholder="e.g. Whole Milk"></div>
+  <div class="form-group"><label>Category</label><select id="inv-item-category" onchange="onInvCategoryChange()"><option value="">Select category...</option></select></div>
+  <div class="form-group"><label>Location</label><select id="inv-item-location-sel"><option value="">Select location...</option></select></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
+    <div class="form-group"><label>Current Qty</label><input type="number" id="inv-item-qty" min="0" value="0"></div>
+    <div class="form-group"><label>Low Stock</label><input type="number" id="inv-item-low" min="0" value="1" title="Show warning below this level"></div>
+    <div class="form-group"><label>Restock At</label><input type="number" id="inv-item-restock" min="0" value="2" title="Prompt to add to list at or below this level"></div>
+  </div>
+  <div class="form-group"><label>Usually from Store</label>
+    <select id="inv-item-store" onchange="handleInvStoreSelect()"><option value="">No preference</option><option value="__add__">+ Add New Store...</option></select>
+  </div>
+  <button class="btn btn-primary mt-md" onclick="saveInvItem()">Save Item</button>
+</div></div>
+
+<!-- TAKE INVENTORY MODAL -->
+<div class="modal-overlay" id="modal-take-inventory"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span id="take-inv-title">Take Inventory</span><button class="modal-close" onclick="closeModal('modal-take-inventory')">✕</button></div>
+  <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Enter current quantities. Leave blank to skip an item.</p>
+  <div id="take-inv-rows"></div>
+  <button class="btn btn-primary mt-md" onclick="saveTakeInventory()">Save Inventory</button>
+</div></div>
+
+<!-- RESTOCK MODAL -->
+<div class="modal-overlay" id="modal-restock"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Restock & Low Stock</span><button class="modal-close" onclick="closeModal('modal-restock')">✕</button></div>
+  <div id="restock-content"></div>
+  <button class="btn btn-outline mt-md" style="width:100%;" onclick="closeModal('modal-restock')">Dismiss / Revisit Later</button>
+</div></div>
+
+<!-- MANAGE LOCATIONS MODAL -->
+<div class="modal-overlay" id="modal-locations"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Inventory Locations</span><button class="modal-close" onclick="closeModal('modal-locations')">✕</button></div>
+  <div id="locations-list"></div>
+  <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+    <input type="text" id="new-location-input" placeholder="New location name..." style="flex:1;">
+    <button class="btn btn-secondary btn-sm" onclick="addLocation()">Add</button>
+  </div>
+</div></div>
+
+<!-- ADD/EDIT LOCATION DETAIL MODAL -->
+<div class="modal-overlay" id="modal-location-detail"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span id="location-detail-title">Edit Location</span><button class="modal-close" onclick="closeModal('modal-location-detail')">✕</button></div>
+  <input type="hidden" id="edit-location-id">
+  <div class="form-group"><label>Location Name</label><input type="text" id="location-name-input"></div>
+  <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Assigned Categories</div>
+  <div id="location-cats-list"></div>
+  <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+    <select id="location-cat-add-sel" style="flex:1;padding:0.5rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:var(--bg);outline:none;"></select>
+    <button class="btn btn-outline btn-sm" onclick="addCatToLocation()">+ Add</button>
+  </div>
+  <button class="btn btn-primary mt-md" onclick="saveLocationDetail()">Save</button>
+</div></div>
+
+<!-- MERGE ITEMS MODAL -->
+<div class="modal-overlay" id="modal-merge"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Merge Items</span><button class="modal-close" onclick="closeModal('modal-merge')">✕</button></div>
+  <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">Select two items to merge. Quantities will be combined. Choose which name to keep.</p>
+  <div id="merge-content"></div>
+</div></div>
+
+<!-- UNCATEGORIZED ITEM PROMPT MODAL -->
+<div class="modal-overlay" id="modal-uncategorized"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title"><span>Assign Item</span><button class="modal-close" onclick="closeModal('modal-uncategorized')">✕</button></div>
+  <div id="uncategorized-content"></div>
 </div></div>
 
 <script type="module">
@@ -713,6 +823,13 @@ const S = {
   household: null,         // { ownerUid, code, permissions:{meals,shopping,favorites,stores} } — set if user is a GUEST
   householdMembers: [],    // [ { uid, firstName, joinedAt } ] — set if user is OWNER
   hhMeals: {}, hhPlans: {}, hhShopItems: [], hhFavMeals: [], hhFavItems: [], hhStores: [], hhShopHistory: [],
+  // Inventory
+  locations: [],        // [{id, name, categories:[]}]  — default: Pantry, Linen Closet
+  invItems: {},         // { locationId: [{id, name, category, qty, lowStock, restock, storeId}] }
+  curInvLocationId: null,
+  mergeSelections: [],
+  pendingUncategorized: [], // items needing category/location during shop completion
+  hhInvItems: {},
   hhUnsubs: [],
   categories: ["Produce","Dairy","Meat & Seafood","Deli","Bakery","Frozen","Pantry","Snacks","Beverages","Household","Health & Wellness","Personal Care","Arts & Crafts","Other"],
   calY: new Date().getFullYear(), calM: new Date().getMonth(),
@@ -814,6 +931,44 @@ function initListeners() {
   S.unsubs.push(onSnapshot(userCol('stores'), s => { S.stores=[]; s.forEach(d=>S.stores.push({id:d.id,...d.data()})); renderStores(); populateStoreDropdowns(); }));
   S.unsubs.push(onSnapshot(userCol('shopHistory'), s => { S.shopHistory=[]; s.forEach(d=>S.shopHistory.push({id:d.id,...d.data(),_owner:'personal'})); renderHistCalendar(); renderHistList(); }));
   getDoc(userRef('config/categories')).then(s => { if(s.exists()&&s.data().list) S.categories=s.data().list; populateCatSelects(); });
+  // Locations
+  S.unsubs.push(onSnapshot(userCol('locations'), s => {
+    S.locations=[]; s.forEach(d=>S.locations.push({id:d.id,...d.data()}));
+    ensureDefaultLocations();
+    renderInvPage(); renderLocationSettings(); populateInvLocationSels();
+  }));
+  // Inventory items per location — subscribe dynamically after locations load
+  loadAllInvItems();
+}
+
+async function ensureDefaultLocations() {
+  if (S.locations.length > 0) return;
+  const defaults = [
+    { name:'Pantry', categories:['Produce','Dairy','Meat & Seafood','Deli','Bakery','Frozen','Pantry','Snacks','Beverages'] },
+    { name:'Linen Closet', categories:['Household','Health & Wellness','Personal Care','Arts & Crafts'] }
+  ];
+  for (const loc of defaults) {
+    await addDoc(userCol('locations'), loc);
+  }
+}
+
+function loadAllInvItems() {
+  // Unsubscribe existing inv listeners (stored separately)
+  if (S._invUnsubs) S._invUnsubs.forEach(u=>u());
+  S._invUnsubs = [];
+  // We'll re-subscribe whenever locations change
+  // For simplicity, subscribe to all invItems as a flat collection with locationId field
+  S._invUnsubs.push(onSnapshot(userCol('invItems'), s => {
+    S.invItems = {};
+    s.forEach(d => {
+      const item = {id:d.id,...d.data()};
+      const loc = item.locationId || 'unknown';
+      if (!S.invItems[loc]) S.invItems[loc] = [];
+      S.invItems[loc].push(item);
+    });
+    renderInvPage();
+    populateInvStoreSel();
+  }));
 }
 
 async function loadHouseholdData() {
@@ -885,7 +1040,7 @@ function initUI() {
 }
 
 // NAV
-const ALL_PAGES = ['home','calendar','favorites','shopping','history','settings','stores'];
+const ALL_PAGES = ['home','calendar','favorites','shopping','history','settings','stores','inventory'];
 window.showPage = function(page) {
   ALL_PAGES.forEach(p => { document.getElementById(`page-${p}`)?.classList.remove('active'); document.getElementById(`nav-${p}`)?.classList.remove('active'); });
   document.getElementById(`page-${page}`)?.classList.add('active');
@@ -893,6 +1048,7 @@ window.showPage = function(page) {
   if(page==='favorites') { renderFavPage(); renderFavItemsPage(); }
   if(page==='shopping') renderShoppingList();
   if(page==='stores') renderStores();
+  if(page==='inventory') renderInvPage();
 };
 
 // MODALS
@@ -901,6 +1057,8 @@ window.openModal = function(id) {
   if(id==='modal-add-item') populateCatSelects();
   if(id==='modal-add-store') { populateStoreCatSelect(); }
   if(id==='modal-favorites') renderModalFavs();
+  if(id==='modal-hh-share') renderInvPermToggles();
+  if(id==='modal-inv-item') { populateCatSelects(); populateInvLocationSels(); populateInvStoreSel(); }
 };
 window.closeModal = function(id) { document.getElementById(id)?.classList.remove('open'); };
 document.querySelectorAll('.modal-overlay').forEach(el => el.addEventListener('click', e => { if(e.target===el) closeModal(el.id); }));
@@ -922,7 +1080,7 @@ window.openAddMealForDate = function() {
 
 // CATEGORIES
 function populateCatSelects() {
-  ['item-category','edit-shop-category'].forEach(id => {
+  ['item-category','edit-shop-category','inv-item-category'].forEach(id => {
     const sel = document.getElementById(id); if(!sel) return;
     const cur = sel.value;
     sel.innerHTML = '<option value="">Select category...</option>';
@@ -930,6 +1088,43 @@ function populateCatSelects() {
     sel.value = cur;
   });
 }
+
+function populateInvLocationSels() {
+  ['inv-item-location-sel','location-cat-add-sel'].forEach(id => {
+    const sel = document.getElementById(id); if(!sel) return;
+    const cur = sel.value;
+    if (id === 'inv-item-location-sel') {
+      sel.innerHTML = '<option value="">Select location...</option>';
+      S.locations.forEach(l => { const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; sel.appendChild(o); });
+    }
+    sel.value = cur;
+  });
+}
+
+function populateInvStoreSel() {
+  const sel = document.getElementById('inv-item-store'); if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">No preference</option>';
+  allStores().forEach(st => { const o=document.createElement('option'); o.value=st.id; o.textContent=st.name; sel.appendChild(o); });
+  sel.innerHTML += '<option value="__add__">+ Add New Store...</option>';
+  if(cur) sel.value = cur;
+}
+
+// Auto-fill location when category selected in inv item form
+window.onInvCategoryChange = function() {
+  const cat = document.getElementById('inv-item-category').value;
+  const locSel = document.getElementById('inv-item-location-sel');
+  if (!cat || !locSel) return;
+  const loc = S.locations.find(l => (l.categories||[]).includes(cat));
+  if (loc) locSel.value = loc.id;
+};
+
+window.handleInvStoreSelect = function() {
+  if (document.getElementById('inv-item-store').value === '__add__') {
+    document.getElementById('inv-item-store').value = '';
+    openModal('modal-add-store');
+  }
+};
 
 function populateStoreCatSelect() {
   const sel = document.getElementById('store-cat-add-select'); if(!sel) return;
@@ -967,7 +1162,19 @@ function renderCategoryList() {
 window.deleteCategory = async function(i) { S.categories.splice(i,1); await saveCategories(); renderCategoryList(); populateCatSelects(); };
 window.addCustomCategory = async function() {
   const inp = document.getElementById('new-category-input'); const v=inp.value.trim(); if(!v) return;
-  if(!S.categories.includes(v)) S.categories.push(v);
+  if(S.categories.includes(v)) { inp.value=''; return; }
+  // Prompt for location
+  if (S.locations.length > 0) {
+    const locNames = S.locations.map((l,i)=>`${i+1}. ${l.name}`).join('\n');
+    const choice = prompt(`Which location should "${v}" belong to?\n${locNames}\n\nEnter number:`);
+    const idx = parseInt(choice) - 1;
+    if (idx >= 0 && idx < S.locations.length) {
+      const loc = S.locations[idx];
+      const newCats = [...(loc.categories||[]), v];
+      await updateDoc(doc(db, `users/${uid()}/locations/${loc.id}`), {categories: newCats});
+    }
+  }
+  S.categories.push(v);
   await saveCategories(); renderCategoryList(); populateCatSelects(); inp.value='';
 };
 async function saveCategories() { await setDoc(userRef('config/categories'), {list:S.categories}); }
@@ -1348,7 +1555,86 @@ window.confirmCompleteShop=async function(){
     for(const item of hhChecked) await deleteDoc(doc(db,`users/${ownerUid()}/shopItems/${item.id}`));
   }
   closeModal('modal-complete-shop');
+  // Update inventory quantities from purchased items
+  await updateInventoryFromShop([...personalChecked, ...hhChecked]);
 };
+
+async function updateInventoryFromShop(purchasedItems) {
+  const allInvFlat = Object.values(S.invItems).flat();
+  const uncategorized = [];
+
+  for (const purchased of purchasedItems) {
+    const match = allInvFlat.find(inv => inv.name.toLowerCase() === (purchased.name||'').toLowerCase());
+    if (match) {
+      // Exact match — increment qty
+      const newQty = (match.qty||0) + (parseInt(purchased.qty)||1);
+      await updateDoc(doc(db,`users/${uid()}/invItems/${match.id}`), {qty:newQty, updatedAt:serverTimestamp()});
+    } else {
+      // No match — need to find location from category or prompt
+      const cat = purchased.category||'';
+      const loc = cat ? S.locations.find(l=>(l.categories||[]).includes(cat)) : null;
+      if (loc) {
+        // Auto-add to correct location
+        await addDoc(userCol('invItems'), {
+          name:purchased.name, category:cat, locationId:loc.id,
+          qty:parseInt(purchased.qty)||1, lowStock:1, restock:2,
+          storeId:purchased.store||'', createdAt:serverTimestamp(), updatedAt:serverTimestamp()
+        });
+      } else {
+        uncategorized.push(purchased);
+      }
+    }
+  }
+
+  if (uncategorized.length) {
+    showUncategorizedPrompt(uncategorized);
+  }
+}
+
+function showUncategorizedPrompt(items) {
+  let idx = 0;
+  function promptNext() {
+    if (idx >= items.length) return;
+    const item = items[idx];
+    const locOpts = S.locations.map((l,i)=>`<option value="${l.id}">${l.name}</option>`).join('');
+    const catOpts = S.categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+    document.getElementById('uncategorized-content').innerHTML = `
+      <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem;">
+        <strong>"${item.name}"</strong> doesn't have an assigned category or location. Please assign one to add it to your inventory.
+        ${items.length>1?' ('+(idx+1)+' of '+items.length+')':''}
+      </p>
+      <div class="form-group"><label>Category</label>
+        <select id="unc-cat" onchange="onUncCatChange()">${catOpts}</select>
+      </div>
+      <div class="form-group"><label>Location</label>
+        <select id="unc-loc">${locOpts}</select>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+        <button class="btn btn-outline btn-sm" onclick="skipUncategorized()">Skip</button>
+        <button class="btn btn-primary" onclick="saveUncategorized('${item.name}',${parseInt(item.qty)||1},'${item.store||''}')">Add to Inventory</button>
+      </div>`;
+    openModal('modal-uncategorized');
+  }
+
+  window.onUncCatChange = function() {
+    const cat = document.getElementById('unc-cat').value;
+    const loc = S.locations.find(l=>(l.categories||[]).includes(cat));
+    if (loc) document.getElementById('unc-loc').value = loc.id;
+  };
+  window.saveUncategorized = async function(name, qty, storeId) {
+    const cat = document.getElementById('unc-cat').value;
+    const locId = document.getElementById('unc-loc').value;
+    await addDoc(userCol('invItems'), {name,category:cat,locationId:locId,qty,lowStock:1,restock:2,storeId,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    idx++;
+    if (idx < items.length) promptNext(); else closeModal('modal-uncategorized');
+  };
+  window.skipUncategorized = function() {
+    idx++;
+    if (idx < items.length) promptNext(); else closeModal('modal-uncategorized');
+  };
+
+  promptNext();
+}
 
 // ITEM DETAIL
 window.openItemDetail=function(id){
@@ -1592,11 +1878,402 @@ window.closeHamburger = function() {
 const _origShowPage = window.showPage;
 window.showPage = function(page) {
   _origShowPage(page);
-  ['home','calendar','favorites','shopping','history','settings'].forEach(p => {
+  ['home','calendar','favorites','shopping','history','settings','inventory'].forEach(p => {
     document.getElementById('hmenu-'+p)?.classList.remove('active');
   });
   document.getElementById('hmenu-'+page)?.classList.add('active');
 };
+
+// ============================================================
+// INVENTORY / LOCATIONS
+// ============================================================
+
+// --- Render inventory page ---
+function renderInvPage() {
+  if (!document.getElementById('page-inventory')) return;
+  const tabBar = document.getElementById('inv-tab-bar');
+  const content = document.getElementById('inv-location-content');
+  if (!tabBar || !content) return;
+
+  if (!S.locations.length) {
+    tabBar.innerHTML = '';
+    content.innerHTML = '<div class="empty-state"><span class="empty-icon">📦</span><div class="empty-title">No locations yet</div><div class="empty-sub">Visit Settings → Inventory Locations to get started.</div></div>';
+    return;
+  }
+
+  // Set default selected location
+  if (!S.curInvLocationId || !S.locations.find(l=>l.id===S.curInvLocationId)) {
+    S.curInvLocationId = S.locations[0].id;
+  }
+
+  tabBar.innerHTML = S.locations.map(l =>
+    `<button class="inv-tab${l.id===S.curInvLocationId?' active':''}" onclick="selectInvLocation('${l.id}')">${l.name}</button>`
+  ).join('');
+
+  renderInvLocationContent();
+}
+
+window.selectInvLocation = function(id) {
+  S.curInvLocationId = id;
+  document.querySelectorAll('.inv-tab').forEach(t => t.classList.toggle('active', t.textContent === S.locations.find(l=>l.id===id)?.name));
+  renderInvLocationContent();
+};
+
+function renderInvLocationContent() {
+  const el = document.getElementById('inv-location-content'); if(!el) return;
+  const loc = S.locations.find(l=>l.id===S.curInvLocationId);
+  if (!loc) return;
+  const items = (S.invItems[S.curInvLocationId]||[]).sort((a,b)=>a.name.localeCompare(b.name));
+  const restockItems = items.filter(i=>(i.qty||0)<=(i.restock||0));
+  const lowItems = items.filter(i=>(i.qty||0)>(i.restock||0)&&(i.qty||0)<=(i.lowStock||0));
+
+  el.innerHTML = `
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" style="background:var(--orange);" onclick="openTakeInventory()">📋 Take Inventory</button>
+      <button class="btn btn-outline btn-sm" onclick="openLowInventory()">⚠️ Low Inventory${restockItems.length+lowItems.length?' ('+( restockItems.length+lowItems.length)+')':''}</button>
+      <button class="btn btn-outline btn-sm" onclick="openRestockModal()">🛒 Manage Restock</button>
+      <button class="btn btn-outline btn-sm" onclick="openMergeModal()">🔀 Merge Items</button>
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-bottom:0.75rem;" onclick="openAddInvItem()">+ Add Item</button>
+    ${!items.length ? '<div class="empty-state"><span class="empty-icon">📦</span><div class="empty-title">No items in '+loc.name+'</div><div class="empty-sub">Add items to track your inventory.</div></div>' :
+      items.map(item => renderInvItemRow(item)).join('')
+    }
+  `;
+}
+
+function stockClass(item) {
+  const qty = item.qty||0;
+  if (qty <= (item.restock||0)) return 'restock';
+  if (qty <= (item.lowStock||0)) return 'low-stock';
+  return '';
+}
+
+function stockDotClass(item) {
+  const qty = item.qty||0;
+  if (qty <= (item.restock||0)) return 'stock-restock';
+  if (qty <= (item.lowStock||0)) return 'stock-low';
+  return 'stock-ok';
+}
+
+function renderInvItemRow(item) {
+  const sc = stockClass(item);
+  const dot = stockDotClass(item);
+  const storeName = getStoreName(item.storeId)||'';
+  return `<div class="inv-item-row ${sc}" id="invrow-${item.id}">
+    <div class="stock-dot ${dot}"></div>
+    <div class="inv-item-info">
+      <div class="inv-item-name">${item.name}</div>
+      <div class="inv-item-meta">${item.category||''}${storeName?' · '+storeName:''}${sc==='restock'?' · <span style="color:#EF4444;font-weight:700;">Needs Restock</span>':sc==='low-stock'?' · <span style="color:#F59E0B;font-weight:700;">Low Stock</span>':''}</div>
+    </div>
+    <div class="inv-qty-badge">
+      <div class="inv-qty-num">${item.qty||0}</div>
+      <div class="inv-qty-label">in stock</div>
+    </div>
+    <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+      <button onclick="openEditInvItem('${item.id}')" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:0.2rem;" title="Edit">✏️</button>
+      <button onclick="deleteInvItem('${item.id}')" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:0.2rem;" title="Delete">🗑️</button>
+    </div>
+  </div>`;
+}
+
+// --- Add / Edit inventory item ---
+window.openAddInvItem = function() {
+  document.getElementById('inv-item-modal-title').textContent = 'Add Item';
+  document.getElementById('inv-item-id').value = '';
+  document.getElementById('inv-item-name').value = '';
+  document.getElementById('inv-item-category').value = '';
+  document.getElementById('inv-item-qty').value = '0';
+  document.getElementById('inv-item-low').value = '1';
+  document.getElementById('inv-item-restock').value = '2';
+  document.getElementById('inv-item-store').value = '';
+  // Pre-select current location
+  openModal('modal-inv-item');
+  setTimeout(()=>{ document.getElementById('inv-item-location-sel').value = S.curInvLocationId||''; },50);
+};
+
+window.openEditInvItem = function(id) {
+  const allItems = Object.values(S.invItems).flat();
+  const item = allItems.find(i=>i.id===id); if(!item) return;
+  document.getElementById('inv-item-modal-title').textContent = 'Edit Item';
+  document.getElementById('inv-item-id').value = id;
+  document.getElementById('inv-item-name').value = item.name||'';
+  document.getElementById('inv-item-qty').value = item.qty||0;
+  document.getElementById('inv-item-low').value = item.lowStock||1;
+  document.getElementById('inv-item-restock').value = item.restock||2;
+  openModal('modal-inv-item');
+  setTimeout(()=>{
+    document.getElementById('inv-item-category').value = item.category||'';
+    document.getElementById('inv-item-location-sel').value = item.locationId||'';
+    document.getElementById('inv-item-store').value = item.storeId||'';
+  },50);
+};
+
+window.saveInvItem = async function() {
+  const name = document.getElementById('inv-item-name').value.trim(); if(!name) return alert('Name required.');
+  const category = document.getElementById('inv-item-category').value;
+  const locationId = document.getElementById('inv-item-location-sel').value; if(!locationId) return alert('Please select a location.');
+  const qty = parseInt(document.getElementById('inv-item-qty').value)||0;
+  const lowStock = parseInt(document.getElementById('inv-item-low').value)||1;
+  const restock = parseInt(document.getElementById('inv-item-restock').value)||2;
+  const storeSelVal = document.getElementById('inv-item-store').value;
+  const storeId = storeSelVal === '__add__' ? '' : storeSelVal;
+  const editId = document.getElementById('inv-item-id').value;
+  const data = {name,category,locationId,qty,lowStock,restock,storeId,updatedAt:serverTimestamp()};
+  if(editId) { await updateDoc(doc(db,`users/${uid()}/invItems/${editId}`), data); }
+  else { await addDoc(userCol('invItems'), {...data,createdAt:serverTimestamp()}); }
+  closeModal('modal-inv-item');
+};
+
+window.deleteInvItem = async function(id) {
+  if(!confirm('Delete this item from inventory?')) return;
+  await deleteDoc(doc(db,`users/${uid()}/invItems/${id}`));
+};
+
+// --- Take Inventory ---
+window.openTakeInventory = function() {
+  const loc = S.locations.find(l=>l.id===S.curInvLocationId); if(!loc) return;
+  document.getElementById('take-inv-title').textContent = `Take Inventory — ${loc.name}`;
+  const items = (S.invItems[S.curInvLocationId]||[]).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!items.length) return alert('No items in this location yet. Add some items first.');
+  document.getElementById('take-inv-rows').innerHTML = items.map(item=>`
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.9rem;">${item.name}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">Current: ${item.qty||0}</div>
+      </div>
+      <input type="number" placeholder="New qty" min="0" data-item-id="${item.id}" style="width:90px;padding:0.5rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;text-align:center;background:var(--bg);">
+    </div>`).join('');
+  openModal('modal-take-inventory');
+};
+
+window.saveTakeInventory = async function() {
+  const inputs = document.querySelectorAll('#take-inv-rows input[data-item-id]');
+  const updates = [];
+  inputs.forEach(inp => {
+    if (inp.value.trim() === '') return; // blank = skip
+    const newQty = parseInt(inp.value)||0;
+    const itemId = inp.dataset.itemId;
+    updates.push({itemId, newQty});
+  });
+  for (const {itemId, newQty} of updates) {
+    await updateDoc(doc(db,`users/${uid()}/invItems/${itemId}`), {qty:newQty, updatedAt:serverTimestamp()});
+  }
+  closeModal('modal-take-inventory');
+  // Show restock modal
+  openRestockModal();
+};
+
+// --- Restock Modal ---
+window.openRestockModal = function() {
+  const locItems = S.invItems[S.curInvLocationId]||[];
+  const restockItems = locItems.filter(i=>(i.qty||0)<=(i.restock||0));
+  const lowItems = locItems.filter(i=>(i.qty||0)>(i.restock||0)&&(i.qty||0)<=(i.lowStock||0));
+  renderRestockContent(restockItems, lowItems);
+  openModal('modal-restock');
+};
+
+window.openLowInventory = function() { openRestockModal(); };
+
+let _restockItems = [], _lowItems = [], _restockSelecting = false;
+
+function renderRestockContent(restockItems, lowItems) {
+  _restockItems = restockItems; _lowItems = lowItems; _restockSelecting = false;
+  const el = document.getElementById('restock-content'); if(!el) return;
+
+  if (!restockItems.length && !lowItems.length) {
+    el.innerHTML = '<div class="empty-state"><span class="empty-icon">✅</span><div class="empty-title">All stocked up!</div><div class="empty-sub">No items need restocking right now.</div></div>';
+    return;
+  }
+
+  let html = '';
+  if (restockItems.length) {
+    html += `<div style="font-size:0.8rem;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">🔴 Needs Restocking (${restockItems.length})</div>`;
+    html += `<div id="restock-items-list">` + restockItems.map(i=>`
+      <div class="inv-item-row restock" id="rsi-${i.id}" style="margin-bottom:0.4rem;">
+        ${_restockSelecting?`<input type="checkbox" class="restock-cb" data-id="${i.id}" style="width:18px;height:18px;flex-shrink:0;">`:''}
+        <div class="inv-item-info"><div class="inv-item-name">${i.name}</div><div class="inv-item-meta">Have: ${i.qty||0} · Restock at: ${i.restock||0}</div></div>
+      </div>`).join('') + '</div>';
+
+    if (!_restockSelecting) {
+      html += `<div style="display:flex;flex-direction:column;gap:0.5rem;margin:0.75rem 0 1rem;">
+        <button class="btn btn-primary btn-sm" onclick="addAllRestockToList('personal')">+ Add All to My List</button>
+        <button class="btn btn-secondary btn-sm" onclick="addAllRestockToList('household')">+ Add All to Household List</button>
+        <button class="btn btn-outline btn-sm" onclick="startRestockSelect()">☑️ Select Items</button>
+      </div>`;
+    } else {
+      html += `<div style="display:flex;gap:0.5rem;margin:0.75rem 0 1rem;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="addSelectedRestock('personal')">+ Add Selected to My List</button>
+        <button class="btn btn-secondary btn-sm" onclick="addSelectedRestock('household')">+ Add Selected to Household List</button>
+      </div>`;
+    }
+  }
+
+  if (lowItems.length) {
+    html += `<div style="font-size:0.8rem;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;margin-top:${restockItems.length?'1rem':'0'};">🟡 Low Stock — Warning Only (${lowItems.length})</div>`;
+    html += lowItems.map(i=>`<div class="inv-item-row low-stock" style="margin-bottom:0.4rem;"><div class="inv-item-info"><div class="inv-item-name">${i.name}</div><div class="inv-item-meta">Have: ${i.qty||0} · Low stock below: ${i.lowStock||0}</div></div></div>`).join('');
+  }
+
+  el.innerHTML = html;
+}
+
+window.startRestockSelect = function() {
+  _restockSelecting = true;
+  renderRestockContent(_restockItems, _lowItems);
+};
+
+async function addItemsToList(items, listType) {
+  for (const item of items) {
+    const storeId = item.storeId||'';
+    const data = {name:item.name,category:item.category||'',store:storeId,qty:1,price:0,notes:'',photoUrl:'',source:'inventory',invItemId:item.id,checked:false,createdAt:serverTimestamp()};
+    if (listType==='household' && canAccess('shopping') && isGuest()) {
+      await addDoc(hhCol('shopItems'), data);
+    } else {
+      await addDoc(userCol('shopItems'), data);
+    }
+  }
+}
+
+window.addAllRestockToList = async function(listType) {
+  await addItemsToList(_restockItems, listType);
+  // Remove added items from restock display
+  _restockItems = [];
+  renderRestockContent(_restockItems, _lowItems);
+};
+
+window.addSelectedRestock = async function(listType) {
+  const checked = [...document.querySelectorAll('.restock-cb:checked')].map(cb=>cb.dataset.id);
+  const toAdd = _restockItems.filter(i=>checked.includes(i.id));
+  await addItemsToList(toAdd, listType);
+  _restockItems = _restockItems.filter(i=>!checked.includes(i.id));
+  _restockSelecting = false;
+  renderRestockContent(_restockItems, _lowItems);
+};
+
+// --- Merge Items ---
+window.openMergeModal = function() {
+  S.mergeSelections = [];
+  const items = (S.invItems[S.curInvLocationId]||[]).sort((a,b)=>a.name.localeCompare(b.name));
+  const el = document.getElementById('merge-content');
+  if (!items.length) { alert('No items to merge.'); return; }
+  el.innerHTML = `<div id="merge-select-list">` + items.map(i=>`
+    <div class="inv-item-row" onclick="toggleMergeSelect('${i.id}',this)" id="merge-row-${i.id}" style="cursor:pointer;margin-bottom:0.4rem;">
+      <div class="inv-item-info"><div class="inv-item-name">${i.name}</div><div class="inv-item-meta">Qty: ${i.qty||0}</div></div>
+    </div>`).join('') + '</div>' +
+    `<button class="btn btn-primary mt-md" onclick="doMerge()">Merge Selected</button>`;
+  openModal('modal-merge');
+};
+
+window.toggleMergeSelect = function(id, el) {
+  if (S.mergeSelections.includes(id)) {
+    S.mergeSelections = S.mergeSelections.filter(x=>x!==id);
+    el.style.borderColor = '';
+  } else {
+    S.mergeSelections.push(id);
+    el.style.borderColor = 'var(--purple)';
+    el.style.background = '#EDE9FE';
+  }
+};
+
+window.doMerge = async function() {
+  if (S.mergeSelections.length < 2) return alert('Select at least 2 items to merge.');
+  const allItems = Object.values(S.invItems).flat();
+  const selected = S.mergeSelections.map(id=>allItems.find(i=>i.id===id)).filter(Boolean);
+  const totalQty = selected.reduce((s,i)=>s+(i.qty||0),0);
+  const opts = selected.map((item,i)=>(i+1)+'. '+item.name).join('\n');
+  const nameChoice = prompt('Which name should persist?\n'+opts+'\n\nEnter number:');
+  const chosen = parseInt(nameChoice)-1;
+  if (isNaN(chosen)||chosen<0||chosen>=selected.length) return alert('Invalid choice.');
+  const keeper = selected[chosen];
+  await updateDoc(doc(db,'users/'+uid()+'/invItems/'+keeper.id), {qty:totalQty, updatedAt:serverTimestamp()});
+  for (const item of selected.filter(i=>i.id!==keeper.id)) {
+    await deleteDoc(doc(db,'users/'+uid()+'/invItems/'+item.id));
+  }
+  closeModal('modal-merge');
+};
+
+// --- Location Settings ---
+window.openManageLocations = function() {
+  renderLocationSettings();
+  openModal('modal-locations');
+};
+
+function renderLocationSettings() {
+  const el = document.getElementById('locations-list'); if(!el) return;
+  el.innerHTML = S.locations.map(l=>`
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:0.4rem;">
+      <div style="flex:1;"><div style="font-weight:700;">${l.name}</div><div style="font-size:0.75rem;color:var(--text-muted);">${(l.categories||[]).slice(0,3).join(', ')}${(l.categories||[]).length>3?' +'+((l.categories||[]).length-3)+' more':''}</div></div>
+      <button class="btn btn-outline btn-sm" onclick="openLocationDetail('${l.id}')">Edit</button>
+      ${l.isDefault?'':`<button class="btn btn-danger btn-sm" onclick="deleteLocation('${l.id}')">🗑️</button>`}
+    </div>`).join('');
+}
+
+window.addLocation = async function() {
+  const inp = document.getElementById('new-location-input'); const v=inp.value.trim(); if(!v) return;
+  await addDoc(userCol('locations'), {name:v, categories:[], createdAt:serverTimestamp()});
+  inp.value='';
+};
+
+window.deleteLocation = async function(id) {
+  if(!confirm('Delete this location? Items inside will not be deleted but will lose their location.')) return;
+  await deleteDoc(doc(db,`users/${uid()}/locations/${id}`));
+};
+
+window.openLocationDetail = function(id) {
+  const loc = S.locations.find(l=>l.id===id); if(!loc) return;
+  document.getElementById('location-detail-title').textContent = `Edit — ${loc.name}`;
+  document.getElementById('edit-location-id').value = id;
+  document.getElementById('location-name-input').value = loc.name;
+  // Assigned cats
+  const el = document.getElementById('location-cats-list');
+  el.innerHTML = (loc.categories||[]).map((c,i)=>`
+    <div class="cat-row"><span class="cat-row-name">${c}</span><span class="cat-row-del" onclick="removeCatFromLocation('${id}','${c}')">✕</span></div>`).join('');
+  // Populate add dropdown with unassigned cats
+  const assigned = new Set(S.locations.flatMap(l=>l.categories||[]));
+  const unassigned = S.categories.filter(c=>!assigned.has(c));
+  const sel = document.getElementById('location-cat-add-sel');
+  sel.innerHTML = unassigned.map(c=>`<option value="${c}">${c}</option>`).join('');
+  openModal('modal-location-detail');
+};
+
+window.removeCatFromLocation = async function(locId, cat) {
+  const loc = S.locations.find(l=>l.id===locId); if(!loc) return;
+  await updateDoc(doc(db,`users/${uid()}/locations/${locId}`), {categories:(loc.categories||[]).filter(c=>c!==cat)});
+  openLocationDetail(locId);
+};
+
+window.addCatToLocation = async function() {
+  const locId = document.getElementById('edit-location-id').value;
+  const cat = document.getElementById('location-cat-add-sel').value; if(!cat) return;
+  const loc = S.locations.find(l=>l.id===locId); if(!loc) return;
+  // Remove from any other location first
+  for (const l of S.locations) {
+    if (l.id!==locId && (l.categories||[]).includes(cat)) {
+      await updateDoc(doc(db,`users/${uid()}/locations/${l.id}`), {categories:l.categories.filter(c=>c!==cat)});
+    }
+  }
+  await updateDoc(doc(db,`users/${uid()}/locations/${locId}`), {categories:[...(loc.categories||[]),cat]});
+  openLocationDetail(locId);
+};
+
+window.saveLocationDetail = async function() {
+  const id = document.getElementById('edit-location-id').value;
+  const name = document.getElementById('location-name-input').value.trim(); if(!name) return;
+  await updateDoc(doc(db,`users/${uid()}/locations/${id}`), {name});
+  closeModal('modal-location-detail');
+};
+
+// --- Ingredient picker: replace Recent with Pantry ---
+function renderIngrPickerPantry(q) {
+  const el = document.getElementById('ingr-picker-recent'); if(!el) return;
+  const allInvItems = Object.values(S.invItems).flat();
+  const filtered = q ? allInvItems.filter(i=>i.name.toLowerCase().includes(q)) : allInvItems;
+  const sorted = filtered.sort((a,b)=>a.name.localeCompare(b.name));
+  if(!sorted.length){el.innerHTML=`<div class="empty-state" style="padding:1rem;"><div class="empty-sub">${q?'No matches':'No inventory items yet'}</div></div>`;return;}
+  el.innerHTML=sorted.map(i=>`<div class="fav-item" onclick="pickIngredient('${i.name.replace(/'/g,"\\'")}')">
+    <div class="fav-icon">📦</div>
+    <div class="fav-info"><div class="fav-name">${i.name}</div><div class="fav-sub">${i.category||''} · In stock: ${i.qty||0}</div></div>
+  </div>`).join('');
+}
 
 // ============================================================
 // HOUSEHOLD SHARING
@@ -1650,11 +2327,18 @@ function renderSettingsPage() {
 }
 
 window.generateHouseholdCode = async function() {
+  // Build per-location perms
+  const locPerms = {};
+  S.locations.forEach(l => {
+    const cb = document.getElementById('perm-loc-'+l.id);
+    locPerms[l.id] = cb ? cb.checked : false;
+  });
   const permissions = {
     shopping: document.getElementById('perm-shopping').checked,
     meals: document.getElementById('perm-meals').checked,
     favorites: document.getElementById('perm-favorites').checked,
     stores: document.getElementById('perm-stores').checked,
+    inventory: locPerms,
   };
   const code = genCode();
   const ownerName = S.profile?.firstName || S.user.email.split('@')[0];
@@ -1866,7 +2550,7 @@ window.openIngrPicker = function(row) {
   document.getElementById('ingr-picker-favorites').classList.remove('hidden');
   document.getElementById('ingr-picker-recent').classList.add('hidden');
   renderIngrPickerFavorites('');
-  renderIngrPickerRecent('');
+  renderIngrPickerPantry('');
   openModal('modal-ingr-picker');
 };
 
@@ -1882,7 +2566,7 @@ window.switchIngrTab = function(tab, btn) {
 window.filterIngrPicker = function() {
   const q = document.getElementById('ingr-picker-search').value.toLowerCase();
   renderIngrPickerFavorites(q);
-  renderIngrPickerRecent(q);
+  renderIngrPickerPantry(q);
 };
 
 function renderIngrPickerFavorites(q) {
@@ -1920,6 +2604,15 @@ window.pickIngredient = function(name) {
     if (input) input.value = name;
   }
   closeModal('modal-ingr-picker');
+};
+
+window.renderInvPermToggles = function() {
+  const el = document.getElementById('perm-inventory-locations'); if(!el) return;
+  el.innerHTML = S.locations.map(l=>`
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:0.25rem;">
+      <div><div style="font-weight:700;font-size:0.9rem;">📦 ${l.name}</div><div style="font-size:0.75rem;color:var(--text-muted);">View and edit ${l.name} inventory</div></div>
+      <input type="checkbox" id="perm-loc-${l.id}" style="width:18px;height:18px;">
+    </label>`).join('');
 };
 
 console.log('cartlist ✓');
