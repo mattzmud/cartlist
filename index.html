@@ -70,18 +70,15 @@ h1,h2,h3,h4,h5 { font-family: 'Nunito', sans-serif; }
 .welcome-block { background: linear-gradient(135deg, var(--black) 0%, #2D1B69 100%); border-radius: var(--radius-lg); padding: 1.75rem; margin-bottom: 1.25rem; color: white; }
 .welcome-name { font-family: 'Nunito', sans-serif; font-size: 1.75rem; font-weight: 900; color: var(--green-light); }
 .welcome-date { font-size: 0.875rem; color: rgba(255,255,255,0.6); margin-top: 0.25rem; }
-.action-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; margin-bottom: 0.875rem; }
-.action-card { background: var(--card); border-radius: var(--radius); padding: 1.25rem 1rem; text-align: center; cursor: pointer; border: 2px solid var(--border); transition: all 0.2s; font-family: 'Nunito', sans-serif; }
+.action-cards { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+.action-card { background: var(--card); border-radius: var(--radius); padding: 1rem 1.25rem; cursor: pointer; border: 2px solid var(--border); transition: all 0.2s; font-family: 'Nunito', sans-serif; display: flex; align-items: center; gap: 1rem; text-align: left; }
 .action-card:hover { border-color: var(--green); transform: translateY(-2px); box-shadow: var(--shadow); }
 .action-icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 0.75rem; }
-.action-card .action-icon { background: #E8F5E9; }
-.action-card-title { font-size: 0.875rem; font-weight: 800; color: var(--text); }
-.action-card-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; font-family: 'Nunito Sans', sans-serif; font-weight: 400; }
-.action-card-full { background: var(--card); border-radius: var(--radius); padding: 1.25rem 1rem; cursor: pointer; border: 2px solid var(--border); transition: all 0.2s; font-family: 'Nunito', sans-serif; display: flex; align-items: center; gap: 1rem; }
-.action-card-full:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow); }
-.action-card-full .action-icon { flex-shrink: 0; background: #FFF0F6; margin: 0; }
-.action-card-full .action-info { text-align: left; }
-.action-card-full .action-card-title { font-size: 1rem; }
+.action-card .action-icon { flex-shrink: 0; margin: 0; }
+.action-card-body { flex: 1; }
+.action-card-title { font-size: 0.95rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem; }
+.action-card-sub { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; font-family: 'Nunito Sans', sans-serif; font-weight: 400; }
+
 .pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.7rem; font-weight: 700; font-family: 'Nunito', sans-serif; white-space: nowrap; }
 .pill-green { background: #E8F5E9; color: #2E7D32; }
 .pill-purple { background: #EDE9FE; color: #4C1D95; }
@@ -230,8 +227,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   .page { max-width: 860px; }
 }
 }
-.hamburger-btn { display: none; padding: 0.4rem 0.875rem; border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--bg); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; color: var(--text); }
-.hamburger-btn:hover { border-color: var(--green); }
+.hamburger-btn { display: none; padding: 0.4rem 0.875rem; border-radius: var(--radius-sm); border: 2px solid var(--border); background: transparent; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; color: var(--text); }
+.hamburger-btn:hover { border-color: var(--green); color: var(--green); }
 .hamburger-menu { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 260px; background: var(--card); box-shadow: -4px 0 24px rgba(26,26,46,0.15); z-index: 300; padding: 1.5rem 1rem; flex-direction: column; gap: 0.25rem; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; }
 .hamburger-menu.open { transform: translateX(0); }
 .hamburger-overlay { display: none; position: fixed; inset: 0; background: rgba(26,26,46,0.4); z-index: 299; }
@@ -294,11 +291,22 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     </div>
     <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.5;margin-bottom:1.25rem;">Welcome to cartlist, your smart shopping and home inventory companion. Start building your shopping list, creating your meal plan, or taking inventory of your pantry by making a selection below.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.875rem;">
-      <div class="action-card" onclick="openModal('modal-add-item')"><div class="action-icon">🛒</div><div class="action-card-title">Add an Item</div><div class="action-card-sub">To shopping list</div></div>
-      <div class="action-card" onclick="openAddMealModal()"><div class="action-icon">🍽️</div><div class="action-card-title">Add a Meal</div><div class="action-card-sub">Plan your meals</div></div>
-      <div class="action-card" onclick="openModal('modal-favorites')"><div class="action-icon" style="background:#FFF0F6;">⭐</div><div class="action-card-title">Favorites</div><div class="action-card-sub">Saved meals &amp; items</div></div>
-      <div class="action-card" onclick="openModal('modal-add-plan')" style="border-color:#FFD4A8;"><div class="action-icon" style="background:#FFF3E0;">🍴</div><div class="action-card-title">Dinner Plans</div><div class="action-card-sub">Eating out &amp; more</div></div>
-      <div class="action-card" onclick="openInvFromHome()" style="border-color:#D1FAE5;"><div class="action-icon" style="background:#D1FAE5;">📦</div><div class="action-card-title">Take Inventory</div><div class="action-card-sub">Pantry &amp; more</div></div>
+      <div class="action-card" onclick="openModal('modal-add-item')">
+        <div class="action-icon" style="background:#E8F5E9;">🛒</div>
+        <div class="action-card-body"><div class="action-card-title">Add an Item</div><div class="action-card-sub">Add an item to your shopping list</div></div>
+      </div>
+      <div class="action-card" onclick="openAddMealModal()">
+        <div class="action-icon" style="background:#EDE9FE;">🍽️</div>
+        <div class="action-card-body"><div class="action-card-title">Add a Meal</div><div class="action-card-sub">Add a meal to your Meal Calendar, and its corresponding items to your shopping list</div></div>
+      </div>
+      <div class="action-card" onclick="openModal('modal-add-plan')">
+        <div class="action-icon" style="background:#FFF3E0;">🍴</div>
+        <div class="action-card-body"><div class="action-card-title">Dinner Plans</div><div class="action-card-sub">Add dinner plans to your meal calendar, like a night out to your favorite restaurant or dinner at Grandma's</div></div>
+      </div>
+      <div class="action-card" onclick="openInvFromHome()">
+        <div class="action-icon" style="background:#D1FAE5;">📦</div>
+        <div class="action-card-body"><div class="action-card-title">Take Inventory</div><div class="action-card-sub">Take inventory of the items in your pantry, linen closet, or other places you store your consumable products</div></div>
+      </div>
     </div>
     <div class="section-header mt-md"><div class="section-title">Today's Meals</div></div>
     <div id="home-today-meals"></div>
@@ -329,13 +337,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 
   <!-- FAVORITES -->
   <div class="page" id="page-favorites">
-    <div class="page-title">Favorites</div>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchFavTab('meals',this)">🍽️ Meals</button>
-      <button class="modal-tab" onclick="switchFavTab('items',this)">🛒 Items</button>
-    </div>
+    <div class="page-title">Saved Meals</div>
     <div id="fav-meals-list"></div>
-    <div id="fav-items-list" class="hidden"></div>
   </div>
 
   <!-- SHOPPING LIST -->
@@ -443,7 +446,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <div class="hamburger-menu-title">cartlist</div>
     <button class="nav-item" onclick="showPage('home');closeHamburger();" id="hmenu-home"><span class="nav-icon">🏠</span><span>Home</span></button>
     <button class="nav-item" onclick="showPage('calendar');closeHamburger();" id="hmenu-calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
-    <button class="nav-item" onclick="showPage('favorites');closeHamburger();" id="hmenu-favorites"><span class="nav-icon">⭐</span><span>Favorites</span></button>
+    <button class="nav-item" onclick="showPage('favorites');closeHamburger();" id="hmenu-favorites"><span class="nav-icon">⭐</span><span>Saved Meals</span></button>
     <button class="nav-item" onclick="showPage('shopping');closeHamburger();" id="hmenu-shopping"><span class="nav-icon">🛒</span><span>Shopping</span></button>
     <button class="nav-item" onclick="showPage('inventory');closeHamburger();" id="hmenu-inventory"><span class="nav-icon">📦</span><span>Inventory</span></button>
     <div style="height:1px;background:var(--border);margin:0.75rem 0;"></div>
@@ -455,7 +458,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <nav class="bottom-nav">
     <button class="nav-item active" onclick="showPage('home')" id="nav-home"><span class="nav-icon">🏠</span><span>Home</span></button>
     <button class="nav-item" onclick="showPage('calendar')" id="nav-calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
-    <button class="nav-item" onclick="showPage('favorites')" id="nav-favorites"><span class="nav-icon">⭐</span><span>Favorites</span></button>
+    <button class="nav-item" onclick="showPage('favorites')" id="nav-favorites"><span class="nav-icon">⭐</span><span>Saved Meals</span></button>
     <button class="nav-item" onclick="showPage('shopping')" id="nav-shopping"><span class="nav-icon">🛒</span><span>Shopping</span></button>
     <button class="nav-item" onclick="showPage('inventory')" id="nav-inventory"><span class="nav-icon">📦</span><span>Inventory</span></button>
   </nav>
@@ -468,7 +471,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="modal-title"><span id="add-item-modal-title">Add Item</span><button class="modal-close" onclick="closeModal('modal-add-item')">✕</button></div>
   <input type="hidden" id="edit-item-id">
   <div class="form-group"><label>Item Name *</label><input type="text" id="item-name" placeholder="e.g. Whole Milk"></div>
-  <div class="form-group"><label>Category</label><select id="item-category"><option value="">Select category...</option></select></div>
+  <div class="form-group"><label>Category</label><select id="item-category" onchange="onItemCategoryChange()"><option value="">Select category...</option></select></div>
   <div class="form-group"><label>Store</label><select id="item-store" onchange="handleStoreSelect('item-store','item-store-other-row')"><option value="">No preference</option></select></div>
   <div class="form-group hidden" id="item-store-other-row"><label>Store Name</label><input type="text" id="item-store-other" placeholder="Enter store name..."></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
@@ -477,11 +480,20 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   </div>
   <div class="form-group"><label>Photo</label><input type="file" id="item-photo" accept="image/*"></div>
   <div class="form-group"><label>Notes</label><textarea class="note-area" id="item-notes" placeholder="Any notes..."></textarea></div>
+  <!-- Inventory toggle -->
   <div class="toggle-row">
-    <div><div class="toggle-label">⭐ Save as Favorite</div><div class="toggle-sub">Quick access for future lists</div></div>
-    <div class="toggle" id="item-fav-toggle" onclick="toggleEl(this)"><div class="toggle-knob"></div></div>
+    <div><div class="toggle-label">📦 Also Add to Inventory</div><div class="toggle-sub">Save this item to your pantry or other location</div></div>
+    <div class="toggle" id="item-inv-toggle" onclick="toggleEl(this);toggleItemInvFields()"><div class="toggle-knob"></div></div>
   </div>
-  <button class="btn btn-primary mt-md" onclick="saveItem()">Save Item</button>
+  <div id="item-inv-fields" class="hidden" style="margin-top:0.75rem;padding:1rem;background:var(--bg);border-radius:var(--radius-sm);border:1.5px solid var(--border);">
+    <div class="form-group"><label>Inventory Location</label><select id="item-inv-location"><option value="">Select location...</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;">
+      <div class="form-group"><label>Current Qty</label><input type="number" id="item-inv-qty" min="0" value="0"></div>
+      <div class="form-group"><label>Low Stock</label><input type="number" id="item-inv-low" min="0" value="1"></div>
+      <div class="form-group"><label>Restock At</label><input type="number" id="item-inv-restock" min="0" value="2"></div>
+    </div>
+  </div>
+  <button class="btn btn-primary mt-md" onclick="saveItem()">Add to Shopping List</button>
 </div></div>
 
 <!-- ADD MEAL -->
@@ -489,22 +501,37 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="modal-handle"></div>
   <div class="modal-title"><span id="add-meal-modal-title">Add Meal</span><button class="modal-close" onclick="closeModal('modal-add-meal')">✕</button></div>
   <input type="hidden" id="edit-meal-id">
-  <div class="form-group"><label>Meal Name *</label><input type="text" id="meal-name" placeholder="e.g. Tacos"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-    <div class="form-group"><label>Type</label><select id="meal-type"><option value="dinner">Dinner</option><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="other">Other</option></select></div>
-    <div class="form-group"><label>Date</label><input type="date" id="meal-date"></div>
+
+  <!-- Saved Meal selector -->
+  <div id="meal-mode-row" style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
+    <button class="view-tab active" id="meal-mode-new" onclick="setMealMode('new',this)" style="flex:1;padding:0.6rem;">New Meal</button>
+    <button class="view-tab" id="meal-mode-saved" onclick="setMealMode('saved',this)" style="flex:1;padding:0.6rem;">From Saved Meal</button>
   </div>
-  <div class="form-group"><label>Notes</label><textarea class="note-area" id="meal-notes" placeholder="Recipe notes, tips..."></textarea></div>
-  <div style="margin-bottom:0.75rem;">
-    <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Ingredients</div>
-    <div id="ingredient-rows"></div>
-    <button class="add-ingredient-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+  <div id="saved-meal-picker" class="hidden" style="margin-bottom:1rem;">
+    <div id="saved-meal-picker-list"></div>
   </div>
-  <div class="toggle-row">
-    <div><div class="toggle-label">⭐ Save as Favorite</div><div class="toggle-sub">Save as meal template</div></div>
-    <div class="toggle" id="meal-fav-toggle" onclick="toggleEl(this)"><div class="toggle-knob"></div></div>
+
+  <div id="meal-form-fields">
+    <div class="form-group"><label>Meal Name *</label><input type="text" id="meal-name" placeholder="e.g. Tacos"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-group"><label>Type</label><select id="meal-type"><option value="dinner">Dinner</option><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="other">Other</option></select></div>
+      <div class="form-group"><label>Date *</label><input type="date" id="meal-date" placeholder="Select a date"></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea class="note-area" id="meal-notes" placeholder="Any notes for this instance..."></textarea></div>
+    <div style="margin-bottom:0.75rem;">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Ingredients to Buy</div>
+      <div style="background:#FEFCE8;border:1.5px solid #FDE047;border-radius:var(--radius-sm);padding:0.6rem 0.875rem;font-size:0.78rem;color:#854D0E;margin-bottom:0.625rem;line-height:1.4;">
+        🛒 Add only the ingredients you need to <strong>purchase</strong> for this meal — this is your shopping list, not a full recipe.
+      </div>
+      <div id="ingredient-rows"></div>
+      <button class="add-ingredient-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">⭐ Save as Meal Template</div><div class="toggle-sub">Save to Saved Meals for quick reuse</div></div>
+      <div class="toggle" id="meal-fav-toggle" onclick="toggleEl(this)"><div class="toggle-knob"></div></div>
+    </div>
+    <button class="btn btn-primary mt-md" onclick="saveMeal()">Save Meal</button>
   </div>
-  <button class="btn btn-primary mt-md" onclick="saveMeal()">Save Meal</button>
 </div></div>
 
 <!-- DINNER PLANS MODAL -->
@@ -718,11 +745,21 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   <div class="form-group"><label>Location</label><select id="inv-item-location-sel"><option value="">Select location...</option></select></div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
     <div class="form-group"><label>Current Qty</label><input type="number" id="inv-item-qty" min="0" value="0"></div>
-    <div class="form-group"><label>Low Stock</label><input type="number" id="inv-item-low" min="0" value="1" title="Show warning below this level"></div>
-    <div class="form-group"><label>Restock At</label><input type="number" id="inv-item-restock" min="0" value="2" title="Prompt to add to list at or below this level"></div>
+    <div class="form-group"><label>Low Stock</label><input type="number" id="inv-item-low" min="0" value="1"></div>
+    <div class="form-group"><label>Restock At</label><input type="number" id="inv-item-restock" min="0" value="2"></div>
   </div>
   <div class="form-group"><label>Usually from Store</label>
     <select id="inv-item-store" onchange="handleInvStoreSelect()"><option value="">No preference</option><option value="__add__">+ Add New Store...</option></select>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+    <div class="form-group"><label>Unit Price ($)</label><input type="number" id="inv-item-price" placeholder="0.00" step="0.01" min="0"></div>
+    <div class="form-group"><label>Photo</label><input type="file" id="inv-item-photo" accept="image/*"></div>
+  </div>
+  <div class="form-group"><label>Notes</label><textarea class="note-area" id="inv-item-notes" placeholder="Any notes..."></textarea></div>
+  <!-- Shopping list toggle -->
+  <div class="toggle-row">
+    <div><div class="toggle-label">🛒 Also Add to Shopping List</div><div class="toggle-sub">Add this item to your shopping list now</div></div>
+    <div class="toggle" id="inv-item-shop-toggle" onclick="toggleEl(this)"><div class="toggle-knob"></div></div>
   </div>
   <button class="btn btn-primary mt-md" onclick="saveInvItem()">Save Item</button>
 </div></div>
@@ -1054,12 +1091,57 @@ document.querySelectorAll('.modal-overlay').forEach(el => el.addEventListener('c
 window.toggleEl = function(el) { el.classList.toggle('on'); };
 
 window.openAddMealModal = function() {
-  document.getElementById('meal-date').value = todayStr();
+  document.getElementById('meal-date').value = '';
   document.getElementById('add-meal-modal-title').textContent = 'Add Meal';
   document.getElementById('edit-meal-id').value = '';
   document.getElementById('ingredient-rows').innerHTML = '';
+  document.getElementById('meal-name').value = '';
+  document.getElementById('meal-notes').value = '';
+  document.getElementById('meal-type').value = 'dinner';
+  document.getElementById('meal-fav-toggle').classList.remove('on');
   addIngredientRow();
+  setMealMode('new', document.getElementById('meal-mode-new'));
   openModal('modal-add-meal');
+};
+
+window.setMealMode = function(mode, btn) {
+  document.querySelectorAll('#meal-mode-row .view-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const isNew = mode === 'new';
+  document.getElementById('meal-form-fields').classList.toggle('hidden', !isNew);
+  document.getElementById('saved-meal-picker').classList.toggle('hidden', isNew);
+  if (!isNew) renderSavedMealPicker();
+};
+
+function renderSavedMealPicker() {
+  const el = document.getElementById('saved-meal-picker-list'); if(!el) return;
+  const meals = allFavMeals();
+  if (!meals.length) {
+    el.innerHTML = '<div class="empty-state"><span class="empty-icon">⭐</span><div class="empty-title">No saved meals yet</div><div class="empty-sub">Save a meal as a template when adding it.</div></div>';
+    return;
+  }
+  el.innerHTML = meals.map(fm=>`
+    <div class="fav-item" onclick="loadSavedMealTemplate('${fm.id}')">
+      <div class="fav-icon">🍽️</div>
+      <div class="fav-info">
+        <div class="fav-name">${fm.name}</div>
+        <div class="fav-sub">${(fm.ingredients||[]).length} ingredients${fm.notes?' · '+fm.notes.substring(0,30):''}</div>
+      </div>
+      <span style="color:var(--text-muted);">›</span>
+    </div>`).join('');
+}
+
+window.loadSavedMealTemplate = function(id) {
+  const fm = allFavMeals().find(f=>f.id===id); if(!fm) return;
+  // Switch to new meal form pre-filled
+  setMealMode('new', document.getElementById('meal-mode-new'));
+  document.getElementById('meal-name').value = fm.name;
+  document.getElementById('meal-type').value = fm.type||'dinner';
+  document.getElementById('meal-notes').value = fm.notes||'';
+  document.getElementById('meal-date').value = ''; // force user to pick date
+  document.getElementById('ingredient-rows').innerHTML = '';
+  (fm.ingredients||[]).forEach(i=>addIngredientRow(i.name,i.qty||1));
+  if (!document.querySelectorAll('#ingredient-rows .ingredient-row').length) addIngredientRow();
 };
 
 window.openAddMealForDate = function() {
@@ -1191,22 +1273,28 @@ window.saveItem = async function() {
   const qty = parseInt(document.getElementById('item-qty').value)||1;
   const price = parseFloat(document.getElementById('item-price').value)||0;
   const notes = document.getElementById('item-notes').value.trim();
-  const isFav = document.getElementById('item-fav-toggle').classList.contains('on');
   const editId = document.getElementById('edit-item-id').value;
+  const addToInv = document.getElementById('item-inv-toggle')?.classList.contains('on');
 
   let photoUrl = '';
   const pf = document.getElementById('item-photo').files[0];
   if(pf) { try { const sr=ref(storage,`users/${uid()}/items/${Date.now()}_${pf.name}`); const sn=await uploadBytes(sr,pf); photoUrl=await getDownloadURL(sn.ref); } catch(e){} }
 
-  if(editId && editId.startsWith('__fav__')) {
-    await updateDoc(doc(db,`users/${uid()}/favItems/${editId.replace('__fav__','')}`), {name,category,notes,price,photoUrl:photoUrl||undefined});
-    resetItemModal(); closeModal('modal-add-item'); return;
-  }
-
-  const data = {name,category,store,qty,price,notes,photoUrl,isFav,source:'manual',checked:false,createdAt:serverTimestamp()};
+  // Always add to shopping list
+  const data = {name,category,store,qty,price,notes,photoUrl,source:'manual',checked:false,createdAt:serverTimestamp()};
   if(editId) { await updateDoc(doc(db,`users/${uid()}/shopItems/${editId}`), {name,category,store,qty,price,notes}); }
   else { await addDoc(userCol('shopItems'), data); }
-  if(isFav) await addDoc(userCol('favItems'), {name,category,notes,price,photoUrl,createdAt:serverTimestamp()});
+
+  // Optionally add to inventory
+  if(addToInv) {
+    const locationId = document.getElementById('item-inv-location')?.value;
+    const invQty = parseInt(document.getElementById('item-inv-qty')?.value)||0;
+    const invLow = parseInt(document.getElementById('item-inv-low')?.value)||1;
+    const invRestock = parseInt(document.getElementById('item-inv-restock')?.value)||2;
+    if(locationId) {
+      await addDoc(userCol('invItems'), {name,category,locationId,qty:invQty,lowStock:invLow,restock:invRestock,storeId:store,price,photoUrl,notes,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    }
+  }
   resetItemModal(); closeModal('modal-add-item');
 };
 
@@ -1214,9 +1302,17 @@ function resetItemModal() {
   ['item-name','item-notes','item-store-other'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('item-category').value=''; document.getElementById('item-store').value='';
   document.getElementById('item-qty').value='1'; document.getElementById('item-price').value='';
-  document.getElementById('item-photo').value=''; document.getElementById('item-fav-toggle').classList.remove('on');
+  document.getElementById('item-photo').value='';
   document.getElementById('edit-item-id').value=''; document.getElementById('add-item-modal-title').textContent='Add Item';
   document.getElementById('item-store-other-row').classList.add('hidden');
+  // Reset inventory toggle
+  const invTog = document.getElementById('item-inv-toggle');
+  if(invTog) invTog.classList.remove('on');
+  document.getElementById('item-inv-fields')?.classList.add('hidden');
+  const invLoc = document.getElementById('item-inv-location');
+  if(invLoc) invLoc.value='';
+  const invQtyEl = document.getElementById('item-inv-qty');
+  if(invQtyEl) invQtyEl.value='0';
 }
 
 window.removeShopItem = async function() {
@@ -1270,10 +1366,11 @@ window.saveMeal = async function() {
 
 function resetMealModal() {
   ['meal-name','meal-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('meal-type').value='dinner'; document.getElementById('meal-date').value=todayStr();
+  document.getElementById('meal-type').value='dinner'; document.getElementById('meal-date').value='';
   document.getElementById('meal-fav-toggle').classList.remove('on'); document.getElementById('edit-meal-id').value='';
   document.getElementById('add-meal-modal-title').textContent='Add Meal';
   document.getElementById('ingredient-rows').innerHTML=''; addIngredientRow();
+  setMealMode('new', document.getElementById('meal-mode-new'));
 }
 
 // CALENDAR
@@ -2006,10 +2103,26 @@ window.saveInvItem = async function() {
   const restock = parseInt(document.getElementById('inv-item-restock').value)||2;
   const storeSelVal = document.getElementById('inv-item-store').value;
   const storeId = storeSelVal === '__add__' ? '' : storeSelVal;
+  const price = parseFloat(document.getElementById('inv-item-price').value)||0;
+  const notes = document.getElementById('inv-item-notes').value.trim();
+  const addToShop = document.getElementById('inv-item-shop-toggle')?.classList.contains('on');
   const editId = document.getElementById('inv-item-id').value;
-  const data = {name,category,locationId,qty,lowStock,restock,storeId,updatedAt:serverTimestamp()};
+
+  let photoUrl = '';
+  const pf = document.getElementById('inv-item-photo')?.files[0];
+  if(pf) { try { const sr=ref(storage,`users/${uid()}/items/${Date.now()}_${pf.name}`); const sn=await uploadBytes(sr,pf); photoUrl=await getDownloadURL(sn.ref); } catch(e){} }
+
+  const data = {name,category,locationId,qty,lowStock,restock,storeId,price,notes,photoUrl,updatedAt:serverTimestamp()};
   if(editId) { await updateDoc(doc(db,`users/${uid()}/invItems/${editId}`), data); }
   else { await addDoc(userCol('invItems'), {...data,createdAt:serverTimestamp()}); }
+
+  // Optionally also add to shopping list
+  if(addToShop) {
+    await addDoc(userCol('shopItems'), {name,category,store:storeId,qty:1,price,notes,photoUrl,source:'inventory',checked:false,createdAt:serverTimestamp()});
+  }
+
+  // Reset toggle
+  document.getElementById('inv-item-shop-toggle')?.classList.remove('on');
   closeModal('modal-inv-item');
 };
 
@@ -2610,6 +2723,29 @@ window.openInvFromHome = function() {
   setTimeout(() => {
     if (S.locations.length) openTakeInventory();
   }, 300);
+};
+
+// Add Item modal — inventory toggle
+window.toggleItemInvFields = function() {
+  const on = document.getElementById('item-inv-toggle').classList.contains('on');
+  document.getElementById('item-inv-fields').classList.toggle('hidden', !on);
+};
+
+function populateItemInvLocations() {
+  const sel = document.getElementById('item-inv-location'); if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select location...</option>';
+  S.locations.forEach(l => { const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; sel.appendChild(o); });
+  if(cur) sel.value = cur;
+}
+
+// Auto-fill inventory location when category changes in add-item modal
+window.onItemCategoryChange = function() {
+  const cat = document.getElementById('item-category').value;
+  const locSel = document.getElementById('item-inv-location');
+  if (!cat || !locSel) return;
+  const loc = S.locations.find(l=>(l.categories||[]).includes(cat));
+  if (loc) locSel.value = loc.id;
 };
 
 console.log('cartlist ✓');
